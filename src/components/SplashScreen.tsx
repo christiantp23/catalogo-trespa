@@ -48,7 +48,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
                     {/* Imagen de calzado premium con filtro de sombra elegante */}
                     <img
-                        src="/logo.png"
+                        src="/logo.webp"
                         alt="Trespa Sneaker Icon"
                         referrerPolicy="no-referrer"
                         className="w-36 h-36 sm:w-40 sm:h-40 object-contain relative z-10 select-none drop-shadow-[0_20px_35px_rgba(59,130,246,0.35)]"

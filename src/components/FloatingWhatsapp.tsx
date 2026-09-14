@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSiteSettings } from '../lib/settings';
 
 export default function FloatingWhatsapp() {
   const [showTooltip, setShowTooltip] = useState(false);
+  const { whatsappNumber } = useSiteSettings();
 
   // Default pre-filled message for support
   const supportText = encodeURIComponent(
     'Hola Trespa Store 👋, visité su tienda online de tenis y me gustaría recibir asesoría sobre sus modelos disponibles.'
   );
-  const waUrl = `https://wa.me/573008165725?text=${supportText}`;
+  const waUrl = `https://wa.me/${whatsappNumber}?text=${supportText}`;
 
   return (
     <div

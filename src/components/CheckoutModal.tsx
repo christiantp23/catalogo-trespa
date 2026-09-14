@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, User, Phone, MapPin, CreditCard, Sparkles, CheckCircle, Building, FileText, MessageSquare, Mail, ClipboardList, MessageCircle, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, CheckoutData } from '../types';
+import { useSiteSettings } from '../lib/settings';
+import { createOrderFromCheckout } from '../lib/orders';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ export default function CheckoutModal({
   cartItems,
   onOrderSuccess,
 }: CheckoutModalProps) {
+  const { whatsappNumber } = useSiteSettings();
   const [formData, setFormData] = useState<CheckoutData>({
     fullName: '',
     email: '',
@@ -154,7 +157,7 @@ export default function CheckoutModal({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Validate all fields on submit
     const newErrors: Record<string, string> = {};
@@ -188,6 +191,16 @@ export default function CheckoutModal({
     }
 
     setIsSubmitting(true);
+
+    // Registramos la solicitud en el panel (para la pestaña "Ventas") antes
+    // de abrir WhatsApp. Si esto falla (sin internet, Supabase caído, etc.)
+    // NO bloqueamos el checkout: WhatsApp sigue siendo el canal real donde
+    // se cierra la venta, este registro es solo un plus para el dueño.
+    try {
+      await createOrderFromCheckout(cartItems, formData, total);
+    } catch (err) {
+      console.error('No se pudo registrar la solicitud en el panel:', err);
+    }
 
     // Format payment method text
     const paymentMethodText =
@@ -272,8 +285,9 @@ export default function CheckoutModal({
     // Por eso usamos "encodeURIComponent()", que convierte de forma segura todo nuestro mensaje
     // de texto en una cadena codificada para internet (por ejemplo, los espacios se vuelven %20).
     //
-    // Usamos el número de destino configurado: 573008165725 (con código de país 57 de Colombia).
-    const waUrl = `https://wa.me/573008165725?text=${encodeURIComponent(message)}`;
+    // Usamos el número de destino configurado en el panel de administración
+    // (Configuración > Número de WhatsApp), con respaldo si no cargó todavía.
+    const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
         setWhatsappUrl(waUrl);
 
 
