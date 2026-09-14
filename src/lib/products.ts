@@ -54,15 +54,24 @@ function mapDbProductToProduct(p: DbProduct): Product {
     if (c.image_url) colorImages[c.name] = c.image_url;
   });
 
-  // Unimos todas las tallas de todos los colorways (la app actual no distingue
-  // disponibilidad por combinación color+talla, solo por producto).
+  // "sizes" sigue siendo la unión de todas las tallas del producto (se usa en
+  // resúmenes generales, ej. el lightbox). "sizesByColor" en cambio respeta
+  // la disponibilidad real de cada talla dentro de CADA color, para que la
+  // ficha del producto pueda bloquear una talla agotada en vez de mostrarla
+  // como seleccionable solo porque otro color sí la tiene.
   const sizeSet = new Set<number>();
-  colorways.forEach((c) =>
-    (c.sizes ?? []).forEach((s) => {
-      const n = parseInt(s.size, 10);
-      if (!Number.isNaN(n)) sizeSet.add(n);
-    })
-  );
+  const sizesByColor: Record<string, { size: number; available: boolean }[]> = {};
+  colorways.forEach((c) => {
+    const colorSizes = (c.sizes ?? [])
+      .map((s) => {
+        const n = parseInt(s.size, 10);
+        return Number.isNaN(n) ? null : { size: n, available: s.available };
+      })
+      .filter((s): s is { size: number; available: boolean } => s !== null)
+      .sort((a, b) => a.size - b.size);
+    sizesByColor[c.name] = colorSizes;
+    colorSizes.forEach((s) => sizeSet.add(s.size));
+  });
   const sizes = Array.from(sizeSet).sort((a, b) => a - b);
 
   const mainImage = colorways[0]?.image_url || p.images?.[0] || "";
@@ -80,6 +89,7 @@ function mapDbProductToProduct(p: DbProduct): Product {
     description: p.description || "",
     colors,
     sizes,
+    sizesByColor,
     isNew: p.is_new,
     isHot: p.is_hot,
     gender: (p.gender as Product["gender"]) || "Unisex",
@@ -181,11 +191,11 @@ export async function deleteColorway(id: string): Promise<void> {
   await sbRest(`colorways?id=eq.${id}`, { method: "DELETE", useAuth: true });
 }
 
-export async function addSize(colorwayId: string, size: string): Promise<void> {
+export async function addSize(colorwayId: string, size: string, available: boolean = true): Promise<void> {
   await sbRest("sizes", {
     method: "POST",
     useAuth: true,
-    body: { colorway_id: colorwayId, size, available: true },
+    body: { colorway_id: colorwayId, size, available },
   });
 }
 
@@ -210,6 +220,50 @@ export async function restoreProduct(id: string): Promise<void> {
 
 export async function permanentlyDeleteProduct(id: string): Promise<void> {
   await deleteProduct(id);
+}
+
+// =========================================================================
+// HISTORIAL DE CAMBIOS DE PRODUCTOS (tabla product_history)
+// =========================================================================
+export interface DbProductHistory {
+  id: string;
+  product_id: string;
+  product_name: string;
+  change_type: "created" | "updated" | "archived" | "restored";
+  field_changed: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  changed_at: string;
+  changed_by: string | null;
+}
+
+export async function logProductChange(
+  productId: string,
+  productName: string,
+  changeType: DbProductHistory["change_type"],
+  fieldChanged: string | null,
+  oldValue: string | null,
+  newValue: string | null
+): Promise<void> {
+  await sbRest("product_history", {
+    method: "POST",
+    useAuth: true,
+    body: {
+      product_id: productId,
+      product_name: productName,
+      change_type: changeType,
+      field_changed: fieldChanged,
+      old_value: oldValue,
+      new_value: newValue,
+    },
+  });
+}
+
+export async function fetchProductHistory(productId: string): Promise<DbProductHistory[]> {
+  return sbRest<DbProductHistory[]>(
+    `product_history?product_id=eq.${productId}&order=changed_at.desc`,
+    { useAuth: true }
+  );
 }
 
 // =========================================================================

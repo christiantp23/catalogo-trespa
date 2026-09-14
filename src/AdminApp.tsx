@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { loadStoredSession, setSession, clearSession } from './lib/supabase';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminOrders from './components/admin/AdminOrders';
 import AdminSettings from './components/admin/AdminSettings';
 import AdminTestimonials from './components/admin/AdminTestimonials';
-import { LayoutGrid, ShoppingBag, Settings, MessageSquareQuote, LogOut, ExternalLink } from 'lucide-react';
+import { LayoutGrid, ShoppingBag, Settings, MessageSquareQuote, LogOut, ExternalLink, Menu, X } from 'lucide-react';
 
 // =========================================================================
 // ADMIN APP — punto de entrada del panel de administración de Trespa Store
@@ -21,10 +22,37 @@ export default function AdminApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkedStorage, setCheckedStorage] = useState(false);
   const [tab, setTab] = useState<Tab>('productos');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setIsAuthenticated(loadStoredSession());
     setCheckedStorage(true);
+  }, []);
+
+  // Atajos de teclado: Ctrl/Cmd+1..4 cambian de pestaña. Se desactivan si el
+  // foco está en un input/textarea/select para no interferir con la escritura.
+  useEffect(() => {
+    const SHORTCUT_TABS: Record<string, Tab> = {
+      '1': 'productos',
+      '2': 'ventas',
+      '3': 'configuracion',
+      '4': 'testimonios',
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+
+      const nextTab = SHORTCUT_TABS[e.key];
+      if (!nextTab) return;
+      e.preventDefault();
+      setTab(nextTab);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleLoginSuccess = (accessToken: string, refreshToken: string) => {
@@ -56,10 +84,35 @@ export default function AdminApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Barra superior con pestañas */}
+      {/* Barra superior: logo + título, navegación de escritorio (pestañas +
+          acciones, inline, igual que siempre) y en mobile un botón de menú
+          hamburguesa que despliega esas mismas pestañas/acciones en una
+          lista vertical. Así la fila superior nunca tiene más contenido del
+          que entra en una línea, sin importar el ancho de pantalla — se
+          reemplaza el intento anterior (flex-wrap + orden de filas), que
+          seguía dependiendo de que todo cupiera horizontalmente. */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          {/* Logo + título del panel. logo.webp es un lienzo cuadrado con
+              mucho margen en blanco alrededor de la marca; se recorta ese
+              margen mostrando solo el recuadro donde está el contenido real
+              (53.7% ancho x 22.2% alto, centrado) en vez de escalarlo entero
+              y verse diminuto. */}
+          <div className="flex items-center gap-3 shrink-0 min-w-0">
+            <div className="h-9 w-[83px] overflow-hidden relative shrink-0">
+              <img
+                src="/logo.webp"
+                alt="Trespa Store"
+                className="absolute top-1/2 left-1/2 h-[151px] w-[151px] max-w-none -translate-x-1/2 -translate-y-1/2"
+              />
+            </div>
+            <div className="h-6 w-px bg-slate-200 shrink-0" />
+            <h1 className="text-base font-bold text-blue-900 whitespace-nowrap">Panel Admin</h1>
+          </div>
+
+          {/* Navegación de escritorio (pestañas + acciones): oculta en
+              mobile, igual que estaba antes de este cambio. */}
+          <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
             {TABS.map((t) => {
               const Icon = t.icon;
               return (
@@ -77,7 +130,7 @@ export default function AdminApp() {
               );
             })}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             <a
               href="/"
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-brand-blue px-3 py-2 rounded-xl transition-colors"
@@ -91,7 +144,68 @@ export default function AdminApp() {
               <LogOut className="w-3.5 h-3.5" /> Cerrar sesión
             </button>
           </div>
+
+          {/* Botón de menú hamburguesa: solo mobile */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((v) => !v)}
+            className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors shrink-0"
+            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
+
+        {/* Menú desplegable mobile: pestañas en lista vertical + acciones.
+            Nunca puede desbordar el ancho de pantalla porque cada ítem es
+            un botón de ancho completo, no una fila horizontal. */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden overflow-hidden border-t border-slate-100"
+            >
+              <div className="px-4 py-3 flex flex-col gap-1">
+                {TABS.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setTab(t.id);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors ${
+                        tab === t.id ? 'bg-brand-blue/10 text-brand-blue' : 'text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" /> {t.label}
+                    </button>
+                  );
+                })}
+                <div className="h-px bg-slate-100 my-1" />
+                <a
+                  href="/"
+                  className="flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Ver tienda
+                </a>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" /> Cerrar sesión
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {tab === 'productos' && <AdminDashboard />}

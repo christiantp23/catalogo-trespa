@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShoppingBag, Search, Sparkles, Heart } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Product } from '../types';
 
 // =========================================================================
 // INTERFAZ DE PROPIEDADES DE NAVBAR (NavbarProps)
@@ -17,6 +18,8 @@ interface NavbarProps {
   onOpenInfo?: (tab: 'tallas' | 'politicas' | 'pagos' | 'transportes') => void;
   wishlistItemsCount: number; // Nuevo: contador de favoritos
   onWishlistOpen: () => void; // Nuevo: acción para abrir favoritos
+  products: Product[]; // Catálogo completo, para armar las sugerencias del buscador
+  onSelectSuggestion: (product: Product) => void; // Al elegir una sugerencia
 }
 
 export default function Navbar({
@@ -27,7 +30,86 @@ export default function Navbar({
   onOpenInfo,
   wishlistItemsCount, // Recibimos el contador
   onWishlistOpen,     // Recibimos la función de apertura
+  products,
+  onSelectSuggestion,
 }: NavbarProps) {
+  // =========================================================================
+  // SUGERENCIAS DE BÚSQUEDA (dropdown bajo el buscador)
+  // =========================================================================
+  // Se calculan a partir de "products" (catálogo completo, no el ya filtrado
+  // por otros filtros) para que el cliente pueda encontrar cualquier
+  // producto por nombre, marca o descripción a partir de 2 caracteres.
+  const suggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q) ||
+          (p.description || '').toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  }, [products, searchQuery]);
+
+  // Qué caja de búsqueda tiene el dropdown abierto (desktop o mobile son dos
+  // inputs distintos en el DOM). null = cerrado.
+  const [openBox, setOpenBox] = useState<'desktop' | 'mobile' | null>(null);
+  const desktopBoxRef = useRef<HTMLDivElement>(null);
+  const mobileBoxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (openBox === 'desktop' && desktopBoxRef.current && !desktopBoxRef.current.contains(target)) {
+        setOpenBox(null);
+      }
+      if (openBox === 'mobile' && mobileBoxRef.current && !mobileBoxRef.current.contains(target)) {
+        setOpenBox(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openBox]);
+
+  const handleSelect = (product: Product) => {
+    onSelectSuggestion(product);
+    setOpenBox(null);
+  };
+
+  const renderSuggestions = (positionClass: string) => (
+    <AnimatePresence>
+      {suggestions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.15 }}
+          className={`absolute top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden z-50 ${positionClass}`}
+        >
+          {suggestions.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => handleSelect(p)}
+              className="flex items-center gap-3 w-full text-left px-3 py-2.5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+            >
+              <img
+                src={p.image}
+                alt={p.name}
+                className="w-10 h-10 rounded-xl object-cover bg-slate-100 shrink-0"
+                referrerPolicy="no-referrer"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-900 truncate">{p.name}</p>
+                <p className="text-[10px] text-slate-400 truncate">{p.brand}</p>
+              </div>
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
   return (
     <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,17 +127,19 @@ export default function Navbar({
           </a>
         </div>
           {/* Search Box */}
-          <div className="flex-1 max-w-sm mx-4 hidden md:block">
+          <div ref={desktopBoxRef} className="relative flex-1 max-w-sm mx-4 hidden md:block">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
+                onFocus={() => setOpenBox('desktop')}
                 placeholder="Buscar tenis..."
                 className="w-full text-xs font-medium pl-10 pr-4 py-3 bg-slate-50/60 hover:bg-slate-50 border border-slate-100 focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10 outline-none rounded-2xl transition-all placeholder:text-slate-400"
               />
             </div>
+            {openBox === 'desktop' && renderSuggestions('left-0 right-0')}
           </div>
 
            {/* Informational Links (Desktop Only) */}
@@ -74,15 +158,17 @@ export default function Navbar({
           {/* Utility Buttons */}
           <div className="flex items-center gap-3">
             {/* Search Toggle for Mobile */}
-            <div className="md:hidden relative max-w-[150px] sm:max-w-xs">
+            <div ref={mobileBoxRef} className="md:hidden relative max-w-[150px] sm:max-w-xs">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
+                onFocus={() => setOpenBox('mobile')}
                 placeholder="Buscar..."
                 className="w-full text-xs pl-8 pr-3 py-2 bg-slate-50 border border-slate-100 outline-none rounded-xl focus:border-brand-blue focus:bg-white"
               />
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              {openBox === 'mobile' && renderSuggestions('right-0 w-72 max-w-[85vw]')}
             </div>
 
             {/* Nosotros button for Mobile/Tablet */}

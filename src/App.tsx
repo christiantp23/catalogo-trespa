@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Truck, TrendingUp, Filter, Heart, ArrowUpRight, CheckCircle, Percent, ChevronDown, Instagram, Facebook, BookImage } from 'lucide-react';
+import { Truck, TrendingUp, Filter, Heart, ArrowUpRight, CheckCircle, Percent, ChevronDown, Instagram, Facebook, BookImage, DollarSign, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, CartItem, ToastNotification} from './types';
 import { fetchProducts } from './lib/products';
@@ -17,6 +17,244 @@ import TestimonialsSection from './components/TestimonialsSection'; // Nuevo: Im
 import ToastContainer from './components/ToastContainer';
 import SplashScreen from './components/SplashScreen';
 //import FloatingCatalogStats from './components/FloatingCatalogStats';
+
+// =========================================================================
+// CONTENIDO DEL PANEL DE FILTROS (Marca / Categoría / Colección / Ofertas / Precio)
+// =========================================================================
+// Se define FUERA de App() a propósito: así React lo trata como el mismo
+// componente en cada render (misma identidad de función) y puede montarse
+// dos veces a la vez sin remontarse — una copia inline en desktop y otra
+// dentro del drawer de filtros en mobile — sin perder el foco de los inputs
+// numéricos de precio ni duplicar la lógica de filtrado.
+interface FilterPanelBodyProps {
+  BRANDS: string[];
+  CATEGORIES: string[];
+  selectedBrand: string;
+  setSelectedBrand: (v: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (v: string) => void;
+  selectedGender: 'Todos' | 'Dama' | 'Caballero' | 'Unisex';
+  setSelectedGender: (v: 'Todos' | 'Dama' | 'Caballero' | 'Unisex') => void;
+  onlyDiscounts: boolean;
+  setOnlyDiscounts: (v: boolean) => void;
+  minPrice: number;
+  setMinPrice: (v: number) => void;
+  maxPrice: number;
+  setMaxPrice: (v: number) => void;
+  catalogMaxPrice: number;
+  formatPriceCOP: (v: number) => string;
+}
+
+function FilterPanelBody({
+  BRANDS,
+  CATEGORIES,
+  selectedBrand,
+  setSelectedBrand,
+  selectedCategory,
+  setSelectedCategory,
+  selectedGender,
+  setSelectedGender,
+  onlyDiscounts,
+  setOnlyDiscounts,
+  minPrice,
+  setMinPrice,
+  maxPrice,
+  setMaxPrice,
+  catalogMaxPrice,
+  formatPriceCOP,
+}: FilterPanelBodyProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {/* Columna 1: Marca */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
+          <Filter className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Marca</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {BRANDS.map((brand) => (
+            <button
+              key={brand}
+              type="button"
+              onClick={() => setSelectedBrand(brand)}
+              className={`text-[11px] py-2 px-2 rounded-xl border text-center transition-all duration-200 truncate cursor-pointer font-medium ${
+                selectedBrand === brand
+                  ? 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs'
+                  : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {brand}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Columna 2: Categoría / Estilo */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
+          <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Categoría</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {CATEGORIES.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setSelectedCategory(category)}
+              className={`text-[11px] py-2 px-2 rounded-xl border text-center transition-all duration-200 truncate cursor-pointer font-medium ${
+                selectedCategory === category
+                  ? 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs'
+                  : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Columna 3: Colección por Género */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
+          <span className="text-xs">👥</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Colección</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { id: 'Todos', label: 'Todos', emoji: '👥', activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
+            { id: 'Dama', label: 'Dama', emoji: '🌸', activeClass: 'bg-pink-500 border-pink-500 text-white font-bold shadow-xs' },
+            { id: 'Caballero', label: 'Caballero', emoji: '⚡', activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
+            { id: 'Unisex', label: 'Unisex', emoji: '👥', activeClass: 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-xs' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setSelectedGender(item.id as 'Todos' | 'Dama' | 'Caballero' | 'Unisex')}
+              className={`text-[11px] py-2 px-1.5 rounded-xl border text-center transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer truncate font-medium ${
+                selectedGender === item.id
+                  ? item.activeClass
+                  : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>{item.emoji}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Columna 4: Ofertas y Descuentos */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
+          <Percent className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ofertas</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyDiscounts(false)}
+            className={`text-[11px] py-2.5 px-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer font-medium ${
+              !onlyDiscounts
+                ? 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs'
+                : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🏷️ Todos los productos
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnlyDiscounts(true)}
+            className={`text-[11px] py-2.5 px-3.5 rounded-xl border text-left transition-all duration-200 flex items-center gap-1.5 cursor-pointer font-medium ${
+              onlyDiscounts
+                ? 'bg-rose-600 border-rose-600 text-white font-bold shadow-xs'
+                : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🔥 En Oferta / Descuento
+          </button>
+        </div>
+      </div>
+
+      {/* Columna 5: Rango de precio */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
+          <DollarSign className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Precio</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Desde $
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={catalogMaxPrice}
+              value={minPrice}
+              onChange={(e) => {
+                const v = Math.max(0, Math.min(Number(e.target.value) || 0, maxPrice));
+                setMinPrice(v);
+              }}
+              className="w-full text-[11px] px-2 py-1.5 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Hasta $
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={catalogMaxPrice}
+              value={maxPrice}
+              onChange={(e) => {
+                const v = Math.min(catalogMaxPrice, Math.max(Number(e.target.value) || 0, minPrice));
+                setMaxPrice(v);
+              }}
+              className="w-full text-[11px] px-2 py-1.5 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 outline-none focus:border-brand-blue"
+            />
+          </div>
+        </div>
+
+        {/* Slider de rango: dos <input type="range"> superpuestos.
+            pointer-events se desactiva en el input completo y se reactiva
+            solo en el thumb, para que ambos sean arrastrables de forma
+            independiente sin que uno le robe los clics al otro. */}
+        <div className="relative h-5 flex items-center">
+          <div className="absolute left-0 right-0 h-1.5 bg-slate-100 rounded-full" />
+          <div
+            className="absolute h-1.5 bg-brand-blue rounded-full"
+            style={{
+              left: `${catalogMaxPrice > 0 ? (minPrice / catalogMaxPrice) * 100 : 0}%`,
+              right: `${catalogMaxPrice > 0 ? 100 - (maxPrice / catalogMaxPrice) * 100 : 0}%`,
+            }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={catalogMaxPrice || 1}
+            value={minPrice}
+            onChange={(e) => setMinPrice(Math.min(Number(e.target.value), maxPrice))}
+            className="absolute w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-blue [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-brand-blue [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+          />
+          <input
+            type="range"
+            min={0}
+            max={catalogMaxPrice || 1}
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(Math.max(Number(e.target.value), minPrice))}
+            className="absolute w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-blue [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-brand-blue [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+          />
+        </div>
+
+        <p className="text-[10px] text-slate-400 text-center">
+          {formatPriceCOP(minPrice)} — {formatPriceCOP(maxPrice)}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 
 export default function App() {
@@ -78,6 +316,19 @@ export default function App() {
   const [selectedBrand, setSelectedBrand] = useState('Todas');
   const [selectedGender, setSelectedGender] = useState<'Todos' | 'Dama' | 'Caballero' | 'Unisex'>('Todos');
 
+  // Filtro de precio (slider): minPrice/maxPrice son el rango elegido por el
+  // usuario. catalogMaxPrice es el precio real más alto del catálogo (no un
+  // valor fijo) y se usa como techo del slider y de los inputs numéricos.
+  // priceInitialized evita que, una vez el usuario mueve el slider, un
+  // recálculo de catalogMaxPrice (ej. cambia el catálogo) le pise el valor.
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [priceInitialized, setPriceInitialized] = useState(false);
+
+  // Drawer de filtros en mobile (bottom sheet) — el panel inline solo se
+  // muestra desde md+ (ver <FilterPanelBody />).
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
   // ==========================================
   // PRODUCTOS: ahora vienen de Supabase (antes venían de data.ts, fijos)
   // ==========================================
@@ -119,6 +370,22 @@ export default function App() {
     () => ['Todas', ...new Set(products.map((p) => p.brand))],
     [products]
   );
+
+  // Precio máximo real del catálogo (no un valor fijo/hardcodeado), usado
+  // como techo del slider de precio y de los inputs "Hasta $".
+  const catalogMaxPrice = useMemo(() => {
+    if (products.length === 0) return 0;
+    return Math.max(...products.map((p) => p.price));
+  }, [products]);
+
+  // Una sola vez, cuando el catálogo termina de cargar, arrancamos el rango
+  // de precio en [0, catalogMaxPrice] (todo el catálogo visible por defecto).
+  useEffect(() => {
+    if (!priceInitialized && catalogMaxPrice > 0) {
+      setMaxPrice(catalogMaxPrice);
+      setPriceInitialized(true);
+    }
+  }, [catalogMaxPrice, priceInitialized]);
 
   // Generar puntuaciones aleatorias estables para cada producto al montar el componente.
   // Esto evita que los productos salten o cambien de posición al agregarlos al carrito o interactuar.
@@ -318,6 +585,18 @@ export default function App() {
     setCartItems([]);
   };
 
+  // Al elegir una sugerencia del buscador: filtramos por el nombre exacto
+  // (así aparece aunque otros filtros lo hubieran ocultado) y hacemos scroll
+  // hasta su tarjeta. isCatalogLoading tarda 600ms en apagarse tras cambiar
+  // searchQuery (shimmer skeleton), así que esperamos un poco más que eso
+  // antes de buscar el elemento en el DOM.
+  const handleSelectSuggestion = (product: Product) => {
+    setSearchQuery(product.name);
+    setTimeout(() => {
+      document.getElementById(`product-card-${product.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 700);
+  };
+
   // / Filtrar productos según búsqueda, categoría, marca, género y descuentos
   const filteredProducts = products.filter((product) => {
 // Si el producto está marcado como agotado desde el código (catálogo), simplemente se oculta
@@ -326,7 +605,8 @@ export default function App() {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory =
       selectedCategory === 'Todos' || product.category === selectedCategory;
@@ -338,11 +618,15 @@ export default function App() {
       selectedGender === 'Todos' || product.gender === selectedGender;
 
       const matchesDiscounts =
-      !onlyDiscounts || 
+      !onlyDiscounts ||
       (!!product.originalPrice && product.originalPrice > product.price) ||
       (product.price % 10000 === 5000);
 
-    return matchesSearch && matchesCategory && matchesBrand && matchesGender && matchesDiscounts;
+    // Antes de que priceInitialized calcule el techo real del catálogo,
+    // no filtramos por precio (maxPrice todavía es 0 y ocultaría todo).
+    const matchesPrice = !priceInitialized || (product.price >= minPrice && product.price <= maxPrice);
+
+    return matchesSearch && matchesCategory && matchesBrand && matchesGender && matchesDiscounts && matchesPrice;
   });
 
   // Sort filtered products
@@ -365,7 +649,7 @@ export default function App() {
   // Reiniciar la cantidad visible cada vez que el usuario aplique algún filtro
   useEffect(() => {
     setVisibleCount(PRODUCTS_PER_PAGE);
-  }, [searchQuery, selectedCategory, selectedBrand, selectedGender, sortBy, onlyDiscounts]);
+  }, [searchQuery, selectedCategory, selectedBrand, selectedGender, sortBy, onlyDiscounts, minPrice, maxPrice]);
 
   // Lista de productos limitada para mostrar en la vista actual
   const displayedProducts = sortedProducts.slice(0, visibleCount);
@@ -381,7 +665,19 @@ export default function App() {
     setSelectedGender('Todos');
     setSortBy('default');
     setOnlyDiscounts(false);
+    setMinPrice(0);
+    setMaxPrice(catalogMaxPrice);
   };
+
+  const formatPriceCOP = (value: number) =>
+    new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const isPriceFiltered = priceInitialized && (minPrice > 0 || maxPrice < catalogMaxPrice);
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 font-sans selection:bg-brand-sky/30 selection:text-brand-blue">
@@ -400,6 +696,8 @@ export default function App() {
         onOpenInfo={openInfoModal}
         wishlistItemsCount={favoriteIds.length} // Nuevo: pasamos la cantidad de productos favoritos actuales
         onWishlistOpen={() => setIsWishlistOpen(true)} // Nuevo: función para abrir la barra lateral de favoritos
+        products={products}
+        onSelectSuggestion={handleSelectSuggestion}
       />
 
  {/* Sección del Banner Principal (Hero) */}
@@ -544,8 +842,10 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
           </div>
         </div>
       
-        {/* Panel de filtros */}
-        <div className="bg-white border border-slate-100 rounded-[30px] p-6 mb-10 shadow-xs">
+        {/* Panel de filtros (desktop / tablet en adelante — md+). En mobile
+            se reemplaza por el botón flotante + drawer definidos más abajo,
+            para no ocupar la pantalla completa con el panel fijo. */}
+        <div className="hidden md:block bg-white border border-slate-100 rounded-[30px] p-6 mb-10 shadow-xs">
           {/* Encabezado del Panel */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
@@ -553,13 +853,13 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
               <h3 className="font-display font-black text-sm text-slate-900 uppercase tracking-wider">
                 Filtros del Catálogo
               </h3>
-              {(selectedCategory !== 'Todos' || selectedBrand !== 'Todas' || selectedGender !== 'Todos' || onlyDiscounts) && (
+              {(selectedCategory !== 'Todos' || selectedBrand !== 'Todas' || selectedGender !== 'Todos' || onlyDiscounts || isPriceFiltered) && (
                 <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-extrabold px-2.5 py-0.5 rounded-full animate-pulse">
                   Filtros Activos
                 </span>
               )}
             </div>
-            {(selectedCategory !== 'Todos' || selectedBrand !== 'Todas' || selectedGender !== 'Todos' || onlyDiscounts || searchQuery !== '') && (
+            {(selectedCategory !== 'Todos' || selectedBrand !== 'Todas' || selectedGender !== 'Todos' || onlyDiscounts || searchQuery !== '' || isPriceFiltered) && (
               <button
                 type="button"
                 onClick={resetFilters}
@@ -570,118 +870,119 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Columna 1: Marca */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Marca</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {BRANDS.map((brand) => (
-                  <button
-                    key={brand}
-                    type="button"
-                    onClick={() => setSelectedBrand(brand)}
-                    className={`text-[11px] py-2 px-2 rounded-xl border text-center transition-all duration-200 truncate cursor-pointer font-medium ${
-                      selectedBrand === brand
-                        ? 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs'
-                        : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {brand}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Columna 2: Categoría / Estilo */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
-                <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Categoría</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {CATEGORIES.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => setSelectedCategory(category)}
-                    className={`text-[11px] py-2 px-2 rounded-xl border text-center transition-all duration-200 truncate cursor-pointer font-medium ${
-                      selectedCategory === category
-                        ? 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs'
-                        : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Columna 3: Colección por Género */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
-                <span className="text-xs">👥</span>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Colección</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { id: 'Todos', label: 'Todos', emoji: '👥', activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
-                  { id: 'Dama', label: 'Dama', emoji: '🌸', activeClass: 'bg-pink-500 border-pink-500 text-white font-bold shadow-xs' },
-                  { id: 'Caballero', label: 'Caballero', emoji: '⚡', activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
-                  { id: 'Unisex', label: 'Unisex', emoji: '👥', activeClass: 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-xs' }
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedGender(item.id as any)}
-                    className={`text-[11px] py-2 px-1.5 rounded-xl border text-center transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer truncate font-medium ${
-                      selectedGender === item.id
-                        ? item.activeClass
-                        : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <span>{item.emoji}</span>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Columna 4: Ofertas y Descuentos */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
-                <Percent className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ofertas</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOnlyDiscounts(false)}
-                  className={`text-[11px] py-2.5 px-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer font-medium ${
-                    !onlyDiscounts
-                      ? 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs'
-                      : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  🏷️ Todos los productos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOnlyDiscounts(true)}
-                  className={`text-[11px] py-2.5 px-3.5 rounded-xl border text-left transition-all duration-200 flex items-center gap-1.5 cursor-pointer font-medium ${
-                    onlyDiscounts
-                      ? 'bg-rose-600 border-rose-600 text-white font-bold shadow-xs'
-                      : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  🔥 En Oferta / Descuento
-                </button>
-              </div>
-            </div>
-          </div>
+          <FilterPanelBody
+            BRANDS={BRANDS}
+            CATEGORIES={CATEGORIES}
+            selectedBrand={selectedBrand}
+            setSelectedBrand={setSelectedBrand}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            selectedGender={selectedGender}
+            setSelectedGender={setSelectedGender}
+            onlyDiscounts={onlyDiscounts}
+            setOnlyDiscounts={setOnlyDiscounts}
+            minPrice={minPrice}
+            setMinPrice={setMinPrice}
+            maxPrice={maxPrice}
+            setMaxPrice={setMaxPrice}
+            catalogMaxPrice={catalogMaxPrice}
+            formatPriceCOP={formatPriceCOP}
+          />
         </div>
+
+        {/* Botón flotante de filtros — solo mobile (md:hidden). Se ubica
+            abajo a la izquierda para no superponerse con el stack de
+            WhatsApp/Telegram, que están fijos abajo a la derecha. */}
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(true)}
+          className="md:hidden fixed bottom-6 left-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3.5 rounded-2xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider shadow-xl active:scale-95 transition-transform"
+        >
+          <Filter className="w-4 h-4" />
+          Filtros
+          {(selectedCategory !== 'Todos' || selectedBrand !== 'Todas' || selectedGender !== 'Todos' || onlyDiscounts || isPriceFiltered) && (
+            <span className="w-2 h-2 rounded-full bg-brand-yellow shrink-0" />
+          )}
+        </button>
+
+        {/* Drawer de filtros (bottom sheet) — solo mobile */}
+        <AnimatePresence>
+          {isFilterDrawerOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="md:hidden fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-50"
+              />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+                className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-[28px] shadow-2xl max-h-[85vh] flex flex-col"
+              >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-slate-900" />
+                    <h3 className="font-display font-black text-sm text-slate-900 uppercase tracking-wider">
+                      Filtros del Catálogo
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterDrawerOpen(false)}
+                    className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 transition-colors"
+                    aria-label="Cerrar filtros"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto px-5 py-5 flex-1">
+                  {(selectedCategory !== 'Todos' || selectedBrand !== 'Todas' || selectedGender !== 'Todos' || onlyDiscounts || searchQuery !== '' || isPriceFiltered) && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="mb-4 text-[11px] font-black text-rose-500 hover:text-rose-600 uppercase tracking-widest flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      Limpiar Filtros
+                    </button>
+                  )}
+                  <FilterPanelBody
+                    BRANDS={BRANDS}
+                    CATEGORIES={CATEGORIES}
+                    selectedBrand={selectedBrand}
+                    setSelectedBrand={setSelectedBrand}
+                    selectedCategory={selectedCategory}
+                    setSelectedCategory={setSelectedCategory}
+                    selectedGender={selectedGender}
+                    setSelectedGender={setSelectedGender}
+                    onlyDiscounts={onlyDiscounts}
+                    setOnlyDiscounts={setOnlyDiscounts}
+                    minPrice={minPrice}
+                    setMinPrice={setMinPrice}
+                    maxPrice={maxPrice}
+                    setMaxPrice={setMaxPrice}
+                    catalogMaxPrice={catalogMaxPrice}
+                    formatPriceCOP={formatPriceCOP}
+                  />
+                </div>
+
+                <div className="px-5 py-4 border-t border-slate-100 shrink-0" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterDrawerOpen(false)}
+                    className="w-full py-3.5 rounded-2xl bg-brand-blue hover:bg-slate-950 text-white text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Ver resultados ({sortedProducts.length})
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Cuadrícula de visualización de productos */}
         <AnimatePresence mode="popLayout">

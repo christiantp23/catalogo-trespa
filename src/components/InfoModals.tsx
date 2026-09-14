@@ -326,7 +326,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                         </div>
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center gap-0.5">
                           <img
-                            src="/public/pse.webp"
+                            src="/pse.webp"
                             alt="Logo PSE"
                             loading="lazy" // Carga diferida para optimizar la lista del carrito
                             referrerPolicy="no-referrer"

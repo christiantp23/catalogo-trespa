@@ -10,6 +10,10 @@ import {
   Trophy,
   MessageCircle,
   Package,
+  Search,
+  Download,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 import {
   DbOrder,
@@ -19,6 +23,7 @@ import {
   cancelOrder,
   revertOrderToPending,
 } from '../../lib/orders';
+import { DbProduct, fetchAdminProducts } from '../../lib/products';
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pendiente: 'Pendiente',
@@ -50,18 +55,58 @@ function isSameMonth(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
+// Semana de lunes a domingo.
+function startOfWeek(date: Date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=domingo..6=sábado
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function isSameWeek(a: Date, b: Date) {
+  return startOfWeek(a).getTime() === startOfWeek(b).getTime();
+}
+
+// Devuelve la URL de imagen de un item de orden buscando el colorway
+// exacto en el producto original; si no lo encuentra usa la primera foto
+// del producto, y como último recurso el logo de la tienda.
+function getItemImage(item: { product_id: string | null; colorway: string | null }, productsMap: Map<string, DbProduct>): string {
+  if (!item.product_id) return '/logo.webp';
+  const product = productsMap.get(item.product_id);
+  if (!product) return '/logo.webp';
+  const colorway = product.colorways?.find((c) => c.name === item.colorway);
+  return colorway?.image_url || product.images?.[0] || '/logo.webp';
+}
+
+function escapeCsvValue(value: string | number): string {
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 type FilterValue = OrderStatus | 'Todas';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<DbOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterValue>('pendiente');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const [productsMap, setProductsMap] = useState<Map<string, DbProduct>>(new Map());
+
   const load = async () => {
     setLoading(true);
+    setIsSyncing(true);
     setError(null);
     try {
       setOrders(await fetchOrders());
@@ -69,11 +114,16 @@ export default function AdminOrders() {
       setError(err instanceof Error ? err.message : 'No se pudieron cargar las ventas');
     } finally {
       setLoading(false);
+      setIsSyncing(false);
     }
   };
 
   useEffect(() => {
     load();
+    // Productos (con colorways) para poder mostrar la foto de cada item vendido.
+    fetchAdminProducts({ includeArchived: true })
+      .then((products) => setProductsMap(new Map(products.map((p) => [p.id, p]))))
+      .catch(() => {});
   }, []);
 
   const confirmed = useMemo(() => orders.filter((o) => o.status === 'confirmada'), [orders]);
@@ -85,26 +135,66 @@ export default function AdminOrders() {
     const todayTotal = confirmed
       .filter((o) => o.confirmed_at && isSameDay(new Date(o.confirmed_at), now))
       .reduce((sum, o) => sum + o.total, 0);
-    const monthTotal = confirmed
-      .filter((o) => o.confirmed_at && isSameMonth(new Date(o.confirmed_at), now))
+
+    const weekConfirmed = confirmed.filter((o) => o.confirmed_at && isSameWeek(new Date(o.confirmed_at), now));
+    const weekTotal = weekConfirmed.reduce((sum, o) => sum + o.total, 0);
+
+    const prevWeekDate = new Date(now);
+    prevWeekDate.setDate(prevWeekDate.getDate() - 7);
+    const prevWeekTotal = confirmed
+      .filter((o) => o.confirmed_at && isSameWeek(new Date(o.confirmed_at), prevWeekDate))
       .reduce((sum, o) => sum + o.total, 0);
-    const avgTicket = confirmed.length ? confirmed.reduce((sum, o) => sum + o.total, 0) / confirmed.length : 0;
+    const weekChangePct =
+      prevWeekTotal === 0 ? (weekTotal > 0 ? 100 : 0) : ((weekTotal - prevWeekTotal) / prevWeekTotal) * 100;
+
+    const monthConfirmed = confirmed.filter((o) => o.confirmed_at && isSameMonth(new Date(o.confirmed_at), now));
+    const monthTotal = monthConfirmed.reduce((sum, o) => sum + o.total, 0);
+    const avgTicket = monthConfirmed.length ? monthTotal / monthConfirmed.length : 0;
+
+    const pendingTotal = orders.filter((o) => o.status === 'pendiente').reduce((sum, o) => sum + o.total, 0);
 
     const productTotals = new Map<string, number>();
-    confirmed.forEach((o) =>
+    monthConfirmed.forEach((o) =>
       (o.order_items || []).forEach((item) => {
         productTotals.set(item.product_name, (productTotals.get(item.product_name) || 0) + item.quantity);
       })
     );
     const topProducts = Array.from(productTotals.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
-    return { todayTotal, monthTotal, avgTicket, topProducts };
-  }, [confirmed]);
+    return { todayTotal, weekTotal, weekChangePct, monthTotal, avgTicket, pendingTotal, topProducts };
+  }, [confirmed, orders]);
 
-  const filtered = useMemo(
-    () => (filter === 'Todas' ? orders : orders.filter((o) => o.status === filter)),
-    [orders, filter]
+  // Pipeline de filtros: búsqueda de texto -> estado -> rango de fechas.
+  const searchFiltered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter(
+      (o) =>
+        o.customer_name.toLowerCase().includes(q) ||
+        o.phone.toLowerCase().includes(q) ||
+        (o.cedula || '').toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q)
+    );
+  }, [orders, searchQuery]);
+
+  const statusFiltered = useMemo(
+    () => (filter === 'Todas' ? searchFiltered : searchFiltered.filter((o) => o.status === filter)),
+    [searchFiltered, filter]
   );
+
+  const dateFiltered = useMemo(() => {
+    if (!dateFrom && !dateTo) return statusFiltered;
+    const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const to = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
+    return statusFiltered.filter((o) => {
+      const created = new Date(o.created_at);
+      if (from && created < from) return false;
+      if (to && created > to) return false;
+      return true;
+    });
+  }, [statusFiltered, dateFrom, dateTo]);
+
+  const hasDateFilter = !!dateFrom || !!dateTo;
 
   const pendingCount = useMemo(() => orders.filter((o) => o.status === 'pendiente').length, [orders]);
 
@@ -154,45 +244,169 @@ export default function AdminOrders() {
     }
   };
 
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Cliente', 'Teléfono', 'Cédula', 'Estado', 'Total', 'Fecha', 'Método pago'];
+    const rows = dateFiltered.map((o) => [
+      o.id,
+      o.customer_name,
+      o.phone,
+      o.cedula || '',
+      STATUS_LABEL[o.status],
+      o.total,
+      new Date(o.created_at).toLocaleString('es-CO'),
+      o.payment_method || '',
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ventas-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      <div className="mb-6">
-        <h1 className="font-display font-bold text-lg text-slate-900 leading-tight">Ventas</h1>
-        <p className="text-xs text-slate-400">
-          {pendingCount > 0
-            ? `${pendingCount} solicitud${pendingCount === 1 ? '' : 'es'} esperando confirmación`
-            : 'Sin solicitudes pendientes'}
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display font-bold text-lg text-slate-900 leading-tight">Ventas</h1>
+            {isSyncing ? (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> Sincronizando...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Sincronizado
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-400">
+            {pendingCount > 0
+              ? `${pendingCount} solicitud${pendingCount === 1 ? '' : 'es'} esperando confirmación`
+              : 'Sin solicitudes pendientes'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">Total de ventas</span>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-brand-blue hover:text-brand-blue transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> Descargar CSV
+          </button>
+        </div>
       </div>
 
       {/* Resumen financiero — calculado solo sobre ventas confirmadas */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
             <TrendingUp className="w-3.5 h-3.5" /> Hoy
           </p>
-          <p className="font-display font-bold text-lg text-slate-900">{formatPrice(metrics.todayTotal)}</p>
+          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+            {formatPrice(metrics.todayTotal)}
+          </p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <TrendingUp className="w-3.5 h-3.5" /> Esta semana
+          </p>
+          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+            {formatPrice(metrics.weekTotal)}
+          </p>
+          <p className={`text-[10px] font-semibold mt-0.5 ${metrics.weekChangePct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {metrics.weekChangePct >= 0 ? '+' : ''}
+            {metrics.weekChangePct.toFixed(0)}% vs semana anterior
+          </p>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
             <TrendingUp className="w-3.5 h-3.5" /> Este mes
           </p>
-          <p className="font-display font-bold text-lg text-slate-900">{formatPrice(metrics.monthTotal)}</p>
+          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+            {formatPrice(metrics.monthTotal)}
+          </p>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
             <Receipt className="w-3.5 h-3.5" /> Ticket promedio
           </p>
-          <p className="font-display font-bold text-lg text-slate-900">{formatPrice(metrics.avgTicket)}</p>
+          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+            {formatPrice(metrics.avgTicket)}
+          </p>
+        </div>
+        <div className="rounded-2xl p-4 shadow-xs border" style={{ backgroundColor: '#FFD10015', borderColor: '#FFD10060' }}>
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-1">
+            <Clock className="w-3.5 h-3.5" /> Pendiente de confirmar
+          </p>
+          <p className="font-display font-bold text-lg text-amber-800">{formatPrice(metrics.pendingTotal)}</p>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-            <Trophy className="w-3.5 h-3.5" /> Top producto
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <Trophy className="w-3.5 h-3.5" /> Top 3 productos (mes)
           </p>
-          <p className="font-semibold text-xs text-slate-900 truncate">
-            {metrics.topProducts[0] ? `${metrics.topProducts[0][0]} (${metrics.topProducts[0][1]})` : 'Sin ventas aún'}
-          </p>
+          {metrics.topProducts.length === 0 ? (
+            <p className="text-xs text-slate-400">Sin ventas aún</p>
+          ) : (
+            <table className="w-full text-xs">
+              <tbody>
+                {metrics.topProducts.map(([name, qty]) => (
+                  <tr key={name}>
+                    <td className="py-0.5 text-slate-700 truncate max-w-[140px]">{name}</td>
+                    <td className="py-0.5 text-right font-bold text-slate-900">{qty}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
+      </div>
+
+      {/* Búsqueda */}
+      <div className="relative mb-3">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar por nombre, teléfono, cédula o ID..."
+          className="w-full text-sm pl-10 pr-4 py-2.5 bg-white border border-slate-100 focus:border-brand-blue outline-none rounded-2xl transition-all shadow-xs"
+        />
+      </div>
+
+      {/* Filtro de fecha */}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <div className="flex items-center gap-1.5 text-slate-400">
+          <Calendar className="w-4 h-4" />
+        </div>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-100 bg-white text-slate-600 outline-none shadow-xs"
+        />
+        <span className="text-xs text-slate-400">a</span>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-100 bg-white text-slate-600 outline-none shadow-xs"
+        />
+        {hasDateFilter && (
+          <button
+            onClick={() => {
+              setDateFrom('');
+              setDateTo('');
+            }}
+            className="text-xs font-semibold px-3 py-2 rounded-xl text-slate-400 hover:text-slate-600"
+          >
+            Limpiar
+          </button>
+        )}
       </div>
 
       {/* Filtros por estado */}
@@ -226,10 +440,10 @@ export default function AdminOrders() {
 
       {!loading && !error && (
         <div className="bg-white border border-slate-100 rounded-[28px] shadow-xs overflow-hidden">
-          {filtered.length === 0 ? (
+          {dateFiltered.length === 0 ? (
             <div className="text-center py-16 text-sm text-slate-400">No hay solicitudes en esta vista.</div>
           ) : (
-            filtered.map((o) => {
+            dateFiltered.map((o) => {
               const isExpanded = expanded.has(o.id);
               return (
                 <div key={o.id} className="border-b border-slate-50 last:border-0">
@@ -264,11 +478,19 @@ export default function AdminOrders() {
                     <div className="px-4 sm:px-6 pb-4 -mt-1">
                       <div className="bg-slate-50/60 rounded-2xl p-4 space-y-2">
                         {(o.order_items || []).map((item) => (
-                          <div key={item.id} className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">
+                          <div key={item.id} className="flex items-center gap-3 text-xs">
+                            <img
+                              src={getItemImage(item, productsMap)}
+                              alt={item.product_name}
+                              className="w-12 h-12 rounded-xl object-cover bg-slate-100 shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/logo.webp';
+                              }}
+                            />
+                            <span className="flex-1 min-w-0 text-slate-600 truncate">
                               {item.product_name} · {item.colorway} · Talla {item.size} × {item.quantity}
                             </span>
-                            <span className="font-semibold text-slate-900">
+                            <span className="font-semibold text-slate-900 shrink-0">
                               {formatPrice(item.price_at_time * item.quantity)}
                             </span>
                           </div>

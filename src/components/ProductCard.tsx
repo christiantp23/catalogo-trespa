@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Star, ShoppingBag, Check, ZoomIn, X, ChevronLeft, ChevronRight, Heart, Share2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Star, ShoppingBag, Check, ZoomIn, X, ChevronLeft, ChevronRight, Heart, Share2, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 
@@ -26,13 +26,37 @@ export default function ProductCard({
   isFavorite = false, // Por defecto es falso
   onToggleFavorite
 }: ProductCardProps) {
-  const [selectedSize, setSelectedSize] = useState<number>(product.sizes[0]);
-  
   // Filtrar colores válidos (evitar strings vacíos como [''])
   const validColors = product.colors ? product.colors.filter(c => c && c.trim() !== '') : [];
   const [selectedColor, setSelectedColor] = useState<string>(
     validColors.length > 0 ? validColors[0] : (product.colors[0] || '')
   );
+
+  // Tallas del color actualmente seleccionado, con su disponibilidad real.
+  // Si el producto no trae sizesByColor (dato viejo o color sin colorway),
+  // caemos de vuelta a la lista plana de "sizes" tratándolas todas como
+  // disponibles, para no romper productos ya cargados.
+  const currentSizeOptions = useMemo(() => {
+    const fromColor = product.sizesByColor?.[selectedColor];
+    if (fromColor && fromColor.length > 0) return fromColor;
+    return product.sizes.map((size) => ({ size, available: true }));
+  }, [product.sizesByColor, product.sizes, selectedColor]);
+
+  const [selectedSize, setSelectedSize] = useState<number>(() => {
+    const firstAvailable = currentSizeOptions.find((s) => s.available);
+    return (firstAvailable ?? currentSizeOptions[0])?.size ?? product.sizes[0];
+  });
+
+  // Si el color cambia y la talla elegida ya no está disponible en ese color
+  // (o no existe), seleccionamos automáticamente la primera talla disponible.
+  useEffect(() => {
+    const stillAvailable = currentSizeOptions.some((s) => s.size === selectedSize && s.available);
+    if (stillAvailable) return;
+    const firstAvailable = currentSizeOptions.find((s) => s.available);
+    if (firstAvailable) setSelectedSize(firstAvailable.size);
+    else if (currentSizeOptions.length > 0) setSelectedSize(currentSizeOptions[0].size);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedColor]);
 
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -535,17 +559,22 @@ export default function ProductCard({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {product.sizes.map((size) => (
+                    {currentSizeOptions.map(({ size, available }) => (
                       <button
                         key={size}
                         type="button"
-                        onClick={() => setSelectedSize(size)}
-                        className={`w-9 h-9 text-xs rounded-lg border flex items-center justify-center transition-all ${
-                          selectedSize === size
+                        disabled={!available}
+                        title={available ? undefined : 'Talla agotada en este color'}
+                        onClick={() => available && setSelectedSize(size)}
+                        className={`w-9 h-9 text-xs rounded-lg border flex items-center justify-center gap-0.5 transition-all ${
+                          !available
+                            ? 'border-slate-100 text-slate-300 bg-slate-50 line-through cursor-not-allowed'
+                            : selectedSize === size
                             ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
                             : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
                         }`}
                       >
+                        {!available && <Lock className="w-2.5 h-2.5 shrink-0" />}
                         {size}
                       </button>
                     ))}

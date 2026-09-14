@@ -13,6 +13,7 @@ import {
   addSize,
   updateSize,
   deleteSize,
+  logProductChange,
 } from '../../lib/products';
 import { uploadProductImage } from '../../lib/supabase';
 
@@ -232,21 +233,45 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   };
 
   // -- tallas por color --
+  // Ciclo de 3 estados por click: no existe -> disponible -> agotada (se
+  // conserva la fila con available:false, no se borra) -> click de nuevo la
+  // quita del todo. Antes, un solo click en una talla ya agregada la borraba
+  // directo de Supabase, así que "marcar agotada" en realidad la eliminaba y
+  // el sitio público simplemente dejaba de mostrarla en vez de bloquearla.
   const handleToggleGuideSize = (colorKey: string, size: string) => {
     setColorways((prev) =>
       prev.map((c) => {
         if (c.key !== colorKey) return c;
         const existing = c.sizes.find((s) => s.size === size && !s.deleted);
-        if (existing) {
+        if (!existing) {
+          return { ...c, sizes: [...c.sizes, { key: genKey(), id: null, size, available: true }] };
+        }
+        if (existing.available) {
           return {
             ...c,
-            sizes: c.sizes
-              .map((s) => (s.key === existing.key ? { ...s, deleted: true } : s))
-              .filter((s) => s.id || !s.deleted),
+            sizes: c.sizes.map((s) => (s.key === existing.key ? { ...s, available: false } : s)),
           };
         }
-        return { ...c, sizes: [...c.sizes, { key: genKey(), id: null, size, available: true }] };
+        return {
+          ...c,
+          sizes: c.sizes
+            .map((s) => (s.key === existing.key ? { ...s, deleted: true } : s))
+            .filter((s) => s.id || !s.deleted),
+        };
       })
+    );
+  };
+
+  // Mismo concepto para tallas agregadas a mano (fuera de la guía): alterna
+  // disponible/agotada sin borrar la fila. El "×" del chip sigue siendo la
+  // única forma de eliminarla por completo.
+  const handleToggleCustomSizeAvailable = (colorKey: string, sizeKey: string) => {
+    setColorways((prev) =>
+      prev.map((c) =>
+        c.key !== colorKey
+          ? c
+          : { ...c, sizes: c.sizes.map((s) => (s.key === sizeKey ? { ...s, available: !s.available } : s)) }
+      )
     );
   };
 
@@ -311,9 +336,11 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       if (isEditing && product) {
         await updateProduct(product.id, input);
         productId = product.id;
+        await logFieldChanges(product, input);
       } else {
         const created = await createProduct(input);
         productId = created.id;
+        await logProductChange(productId, input.name, 'created', null, null, null);
       }
 
       await saveColorways(productId);
@@ -323,6 +350,53 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       setError(err instanceof Error ? err.message : 'No se pudo guardar el producto');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Compara el producto original contra los valores nuevos del formulario y
+  // registra en product_history una fila por cada campo que cambió.
+  const FIELD_LABELS: Record<string, string> = {
+    name: 'Nombre',
+    brand: 'Marca',
+    gender: 'Género',
+    style: 'Categoría',
+    description: 'Descripción',
+    price: 'Precio',
+    original_price: 'Precio anterior',
+    rating: 'Rating',
+    is_new: 'Nuevo',
+    is_hot: 'Destacado',
+    status: 'Estado',
+  };
+
+  const logFieldChanges = async (original: DbProduct, input: Record<string, unknown>) => {
+    const originalValues: Record<string, unknown> = {
+      name: original.name,
+      brand: original.brand,
+      gender: original.gender,
+      style: original.style,
+      description: original.description,
+      price: original.price,
+      original_price: original.original_price,
+      rating: original.rating,
+      is_new: original.is_new,
+      is_hot: original.is_hot,
+      status: original.status,
+    };
+
+    for (const field of Object.keys(FIELD_LABELS)) {
+      const oldVal = originalValues[field];
+      const newVal = input[field];
+      if (oldVal === newVal) continue;
+      if ((oldVal ?? '') === (newVal ?? '')) continue;
+      await logProductChange(
+        original.id,
+        input.name as string,
+        'updated',
+        FIELD_LABELS[field],
+        oldVal === null || oldVal === undefined ? null : String(oldVal),
+        newVal === null || newVal === undefined ? null : String(newVal)
+      );
     }
   };
 
@@ -353,14 +427,14 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               await updateSize(s.id, s.available);
             }
           } else if (!s.id && !s.deleted) {
-            await addSize(c.id, s.size);
+            await addSize(c.id, s.size, s.available);
           }
         }
       } else {
         // Color nuevo: se crea recién ahora, junto con sus tallas
         const created = await addColorway(productId, c.name, c.image_url);
         for (const s of c.sizes) {
-          if (!s.deleted) await addSize(created.id, s.size);
+          if (!s.deleted) await addSize(created.id, s.size, s.available);
         }
       }
     }
@@ -653,20 +727,39 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                     </div>
 
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                        Tallas disponibles (EUR)
-                      </p>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                          Tallas disponibles (EUR)
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Click: agregar → agotada → quitar
+                        </p>
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {sizeGuideForGender.map((size) => {
-                          const selected = c.sizes.some((s) => s.size === size && !s.deleted);
+                          const entry = c.sizes.find((s) => s.size === size && !s.deleted);
+                          const state: 'none' | 'available' | 'unavailable' = !entry
+                            ? 'none'
+                            : entry.available
+                            ? 'available'
+                            : 'unavailable';
                           return (
                             <button
                               key={size}
                               type="button"
                               onClick={() => handleToggleGuideSize(c.key, size)}
+                              title={
+                                state === 'none'
+                                  ? 'Agregar talla'
+                                  : state === 'available'
+                                  ? 'Disponible — click para marcar agotada'
+                                  : 'Agotada — click para quitarla'
+                              }
                               className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
-                                selected
+                                state === 'available'
                                   ? 'bg-brand-blue text-white border-brand-blue'
+                                  : state === 'unavailable'
+                                  ? 'bg-amber-50 text-amber-600 border-amber-200 line-through'
                                   : 'bg-white text-slate-500 border-slate-200 hover:border-brand-blue hover:text-brand-blue'
                               }`}
                             >
@@ -681,11 +774,26 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                             <button
                               key={s.key}
                               type="button"
-                              onClick={() => handleRemoveSize(c.key, s.key)}
-                              title="Quitar talla"
-                              className="px-3 py-2 rounded-xl text-xs font-semibold border bg-amber-50 text-amber-700 border-amber-200"
+                              onClick={() => handleToggleCustomSizeAvailable(c.key, s.key)}
+                              title={s.available ? 'Disponible — click para marcar agotada' : 'Agotada — click para volver a disponible'}
+                              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                                s.available
+                                  ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/30'
+                                  : 'bg-amber-50 text-amber-600 border-amber-200 line-through'
+                              }`}
                             >
-                              {s.size} ×
+                              {s.size}
+                              <span
+                                role="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveSize(c.key, s.key);
+                                }}
+                                title="Quitar talla"
+                                className="hover:text-rose-600"
+                              >
+                                ×
+                              </span>
                             </button>
                           ))}
                       </div>

@@ -11,6 +11,7 @@ import {
   Copy,
   CheckSquare,
   Square,
+  History,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -23,8 +24,11 @@ import {
   restoreProduct,
   permanentlyDeleteProduct,
   duplicateProduct,
+  logProductChange,
 } from '../../lib/products';
 import ProductFormModal from './ProductFormModal';
+import ConfirmModal from './ConfirmModal';
+import ProductHistoryModal from './ProductHistoryModal';
 
 const STATUS_LABEL: Record<DbStatus, string> = {
   disponible: 'Disponible',
@@ -53,6 +57,14 @@ export default function AdminDashboard() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null);
+
+  const [archiveConfirm, setArchiveConfirm] = useState<{ show: boolean; productId?: string }>({ show: false });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; productId?: string; productName?: string }>({
+    show: false,
+  });
+  const [historyModal, setHistoryModal] = useState<{ show: boolean; productId?: string; productName?: string }>({
+    show: false,
+  });
 
   const loadProducts = async () => {
     setLoading(true);
@@ -153,27 +165,47 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleArchive = async (id: string) => {
-    if (!confirm('¿Archivar este producto? Deja de mostrarse en la tienda pero podés recuperarlo después.')) return;
+  const handleArchiveClick = (id: string) => {
+    setArchiveConfirm({ show: true, productId: id });
+  };
+
+  const handleConfirmArchive = async () => {
+    const id = archiveConfirm.productId;
+    setArchiveConfirm({ show: false });
+    if (!id) return;
+    const p = products.find((prod) => prod.id === id);
     try {
       await archiveProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      if (p) await logProductChange(id, p.name, 'archived', null, null, null);
+      setProducts((prev) => prev.filter((prod) => prod.id !== id));
     } catch (err) {
       alert('No se pudo archivar: ' + (err instanceof Error ? err.message : ''));
     }
   };
 
+  const handleOpenHistory = (id: string, name: string) => {
+    setHistoryModal({ show: true, productId: id, productName: name });
+  };
+
   const handleRestore = async (id: string) => {
+    const p = products.find((prod) => prod.id === id);
     try {
       await restoreProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      if (p) await logProductChange(id, p.name, 'restored', null, null, null);
+      setProducts((prev) => prev.filter((prod) => prod.id !== id));
     } catch (err) {
       alert('No se pudo restaurar: ' + (err instanceof Error ? err.message : ''));
     }
   };
 
-  const handlePermanentDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar "${name}" definitivamente? Esto NO se puede deshacer.`)) return;
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteConfirm({ show: true, productId: id, productName: name });
+  };
+
+  const handleConfirmDelete = async () => {
+    const id = deleteConfirm.productId;
+    setDeleteConfirm({ show: false });
+    if (!id) return;
     try {
       await permanentlyDeleteProduct(id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -337,7 +369,7 @@ export default function AdminDashboard() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
+                    className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
                   >
                     <button onClick={() => toggleSelectOne(p.id)} className="shrink-0">
                       {selected.has(p.id) ? (
@@ -372,86 +404,100 @@ export default function AdminDashboard() {
                       </p>
                     </div>
 
-                    {!showArchived && (
-                      <>
-                        <div className="hidden md:flex items-center gap-1 shrink-0">
-                          <button
-                            title="Marcar como nuevo"
-                            onClick={() => handleToggle(p.id, 'is_new', !p.is_new)}
-                            className={`p-2 rounded-xl border transition-colors ${
-                              p.is_new ? 'bg-sky-50 border-sky-200 text-sky-600' : 'border-slate-100 text-slate-300 hover:text-slate-500'
-                            }`}
-                          >
-                            <Tag className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            title="Marcar como destacado"
-                            onClick={() => handleToggle(p.id, 'is_hot', !p.is_hot)}
-                            className={`p-2 rounded-xl border transition-colors ${
-                              p.is_hot ? 'bg-amber-50 border-amber-200 text-amber-600' : 'border-slate-100 text-slate-300 hover:text-slate-500'
-                            }`}
-                          >
-                            <Flame className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        <select
-                          value={p.status}
-                          onChange={(e) => handleStatusChange(p.id, e.target.value as DbStatus)}
-                          className={`text-xs font-semibold px-3 py-2 rounded-xl border outline-none cursor-pointer shrink-0 ${STATUS_STYLE[p.status]}`}
-                        >
-                          {(Object.keys(STATUS_LABEL) as DbStatus[]).map((s) => (
-                            <option key={s} value={s}>
-                              {STATUS_LABEL[s]}
-                            </option>
-                          ))}
-                        </select>
-                      </>
-                    )}
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      {showArchived ? (
+                    {/* Controles (estado + acciones): en mobile ocupan su
+                        propia fila completa debajo de la info del producto
+                        (w-full fuerza el wrap de forma predecible en vez de
+                        dejar que se aprieten/recorten); en desktop vuelven a
+                        sentarse en la misma fila de siempre, sin cambios. */}
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                      {!showArchived && (
                         <>
-                          <button
-                            title="Restaurar"
-                            onClick={() => handleRestore(p.id)}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                          <div className="hidden md:flex items-center gap-1 shrink-0">
+                            <button
+                              title="Marcar como nuevo"
+                              onClick={() => handleToggle(p.id, 'is_new', !p.is_new)}
+                              className={`p-2 rounded-xl border transition-colors ${
+                                p.is_new ? 'bg-sky-50 border-sky-200 text-sky-600' : 'border-slate-100 text-slate-300 hover:text-slate-500'
+                              }`}
+                            >
+                              <Tag className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              title="Marcar como destacado"
+                              onClick={() => handleToggle(p.id, 'is_hot', !p.is_hot)}
+                              className={`p-2 rounded-xl border transition-colors ${
+                                p.is_hot ? 'bg-amber-50 border-amber-200 text-amber-600' : 'border-slate-100 text-slate-300 hover:text-slate-500'
+                              }`}
+                            >
+                              <Flame className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <select
+                            value={p.status}
+                            onChange={(e) => handleStatusChange(p.id, e.target.value as DbStatus)}
+                            className={`text-xs font-semibold px-3 py-2 rounded-xl border outline-none cursor-pointer shrink-0 ${STATUS_STYLE[p.status]}`}
                           >
-                            <ArchiveRestore className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Eliminar definitivamente"
-                            onClick={() => handlePermanentDelete(p.id, p.name)}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            title="Duplicar"
-                            onClick={() => handleDuplicate(p)}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-brand-blue hover:bg-slate-50 transition-colors"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Editar"
-                            onClick={() => openEditProduct(p)}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-brand-blue hover:bg-slate-50 transition-colors"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Archivar"
-                            onClick={() => handleArchive(p.id)}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          >
-                            <Archive className="w-4 h-4" />
-                          </button>
+                            {(Object.keys(STATUS_LABEL) as DbStatus[]).map((s) => (
+                              <option key={s} value={s}>
+                                {STATUS_LABEL[s]}
+                              </option>
+                            ))}
+                          </select>
                         </>
                       )}
+
+                      <div className="flex items-center gap-1 shrink-0 ml-auto md:ml-0">
+                        <button
+                          title="Ver cambios"
+                          onClick={() => handleOpenHistory(p.id, p.name)}
+                          className="p-2.5 rounded-xl text-slate-400 hover:text-brand-blue hover:bg-slate-50 transition-colors"
+                        >
+                          <History className="w-4 h-4" />
+                        </button>
+                        {showArchived ? (
+                          <>
+                            <button
+                              title="Restaurar"
+                              onClick={() => handleRestore(p.id)}
+                              className="p-2.5 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                            >
+                              <ArchiveRestore className="w-4 h-4" />
+                            </button>
+                            <button
+                              title="Eliminar definitivamente"
+                              onClick={() => handleDeleteClick(p.id, p.name)}
+                              className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              title="Duplicar"
+                              onClick={() => handleDuplicate(p)}
+                              className="p-2.5 rounded-xl text-slate-400 hover:text-brand-blue hover:bg-slate-50 transition-colors"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                              title="Editar"
+                              onClick={() => openEditProduct(p)}
+                              className="p-2.5 rounded-xl text-slate-400 hover:text-brand-blue hover:bg-slate-50 transition-colors"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              title="Archivar"
+                              onClick={() => handleArchiveClick(p.id)}
+                              className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -471,6 +517,36 @@ export default function AdminDashboard() {
               setFormOpen(false);
               loadProducts();
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {archiveConfirm.show && (
+          <ConfirmModal
+            title="Archivar producto"
+            message="¿Archivar este producto? Deja de mostrarse en la tienda pero podés recuperarlo después."
+            confirmText="Archivar"
+            isDangerous={false}
+            onConfirm={handleConfirmArchive}
+            onCancel={() => setArchiveConfirm({ show: false })}
+          />
+        )}
+        {deleteConfirm.show && (
+          <ConfirmModal
+            title="Eliminar definitivamente"
+            message={`¿Eliminar "${deleteConfirm.productName}" definitivamente? Esto NO se puede deshacer.`}
+            confirmText="Eliminar"
+            isDangerous
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setDeleteConfirm({ show: false })}
+          />
+        )}
+        {historyModal.show && historyModal.productId && (
+          <ProductHistoryModal
+            productId={historyModal.productId}
+            productName={historyModal.productName || ''}
+            onClose={() => setHistoryModal({ show: false })}
           />
         )}
       </AnimatePresence>

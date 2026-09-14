@@ -9,7 +9,11 @@ export interface Product {
   category: string;
   description: string;
   colors: string[];
-  sizes: number[];
+  sizes: number[]; // unión de todas las tallas del producto (para resúmenes generales, ej. el lightbox)
+  // Tallas por color con su disponibilidad real (viene de sizes.available en Supabase).
+  // Permite que la ficha del producto muestre solo las tallas de ese color y bloquee
+  // las agotadas en vez de mezclarlas todas en un único array como antes.
+  sizesByColor?: Record<string, { size: number; available: boolean }[]>;
   isNew?: boolean;
   isHot?: boolean;
   gender?: 'Dama' | 'Caballero' | 'Unisex';
