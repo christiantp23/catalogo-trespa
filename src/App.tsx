@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Truck, TrendingUp, Filter, Heart, ArrowUpRight, CheckCircle, Percent, ChevronDown, Instagram, Facebook, BookImage } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, CartItem, ToastNotification} from './types';
-import { SNEAKER_PRODUCTS, CATEGORIES, BRANDS } from './data';
+import { fetchProducts } from './lib/products';
+import { useSiteSettings } from './lib/settings';
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import ProductSkeleton from './components/ProductSkeleton';
@@ -19,6 +20,7 @@ import SplashScreen from './components/SplashScreen';
 
 
 export default function App() {
+  const { bannerText } = useSiteSettings();
   // ==========================================
   // 1. PERSISTENCIA LOCAL DEL CARRITO (localStorage)
   // ==========================================
@@ -75,15 +77,58 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedBrand, setSelectedBrand] = useState('Todas');
   const [selectedGender, setSelectedGender] = useState<'Todos' | 'Dama' | 'Caballero' | 'Unisex'>('Todos');
+
+  // ==========================================
+  // PRODUCTOS: ahora vienen de Supabase (antes venían de data.ts, fijos)
+  // ==========================================
+  // Se cargan una vez al montar la app. Mientras cargan, se muestra el
+  // skeleton que ya existía (isCatalogLoading). Si algo falla (sin internet,
+  // Supabase caído), products queda vacío y se muestra el estado
+  // "sin resultados" que ya maneja el catálogo más abajo.
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsError, setProductsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsCatalogLoading(true);
+    fetchProducts()
+      .then((data) => {
+        if (!cancelled) {
+          setProducts(data);
+          setProductsError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setProductsError(err.message || 'No se pudo cargar el catálogo');
+      })
+      .finally(() => {
+        if (!cancelled) setIsCatalogLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // CATEGORIES y BRANDS ahora se calculan a partir de los productos que
+  // llegaron de Supabase, en vez de ser fijos.
+  const CATEGORIES = useMemo(
+    () => ['Todos', ...new Set(products.map((p) => p.category))],
+    [products]
+  );
+  const BRANDS = useMemo(
+    () => ['Todas', ...new Set(products.map((p) => p.brand))],
+    [products]
+  );
+
   // Generar puntuaciones aleatorias estables para cada producto al montar el componente.
   // Esto evita que los productos salten o cambien de posición al agregarlos al carrito o interactuar.
   const randomScores = useMemo(() => {
     const scores: Record<string, number> = {};
-    SNEAKER_PRODUCTS.forEach((product) => {
+    products.forEach((product) => {
       scores[product.id] = Math.random();
     });
     return scores;
-  }, []);
+  }, [products]);
   const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'rating'>('default');
   const [onlyDiscounts, setOnlyDiscounts] = useState(false);
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
@@ -194,7 +239,7 @@ export default function App() {
   // - Si el ID del producto ya existe en la lista, lo filtramos para removerlo (quitar de favoritos).
   // - Si no está, creamos un nuevo arreglo añadiendo el nuevo ID al final de los anteriores.
   const handleToggleFavorite = (productId: string) => {
-    const product = SNEAKER_PRODUCTS.find((p) => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     const productName = product ? product.name : 'Producto';
 
     setFavoriteIds((prev) => {
@@ -274,7 +319,7 @@ export default function App() {
   };
 
   // / Filtrar productos según búsqueda, categoría, marca, género y descuentos
-  const filteredProducts = SNEAKER_PRODUCTS.filter((product) => {
+  const filteredProducts = products.filter((product) => {
 // Si el producto está marcado como agotado desde el código (catálogo), simplemente se oculta
     if (product.isOutOfStock) return false;
 
@@ -373,7 +418,7 @@ export default function App() {
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-sky/10 border border-brand-sky/20 text-brand-sky text-xs font-semibold tracking-wider uppercase"
               >
                 <Truck className="w-3.5 h-3.5" />
-                <span>ENVÍO GRATIS A TODA COLOMBIA</span>
+                <span>{bannerText.toUpperCase()}</span>
                 <span className="inline-flex flex-col w-5 h-3.5 rounded-xs overflow-hidden shadow-xs border border-brand-sky/20 shrink-0 select-none" title="Colombia">
                   <span className="bg-[#FCD116] h-1/2 w-full" />
                   <span className="bg-[#003893] h-1/4 w-full" />
@@ -439,7 +484,7 @@ export default function App() {
               Catálogo de <span className="text-brand-blue">Modelos</span>
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Mostrando {sortedProducts.length} de {SNEAKER_PRODUCTS.length} referencias de primera calidad
+              Mostrando {sortedProducts.length} de {products.length} referencias de primera calidad
             </p>
           </div>
 
@@ -666,10 +711,12 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
                 <Filter className="w-6 h-6" />
               </div>
               <h3 className="font-display font-bold text-lg text-slate-900 mb-1">
-                No encontramos coincidencias
+                {productsError ? 'No se pudo cargar el catálogo' : 'No encontramos coincidencias'}
               </h3>
               <p className="text-xs text-slate-400 max-w-xs mx-auto mb-6 leading-relaxed">
-                No hay productos que cumplan con los filtros de búsqueda aplicados. Intenta restablecer los filtros para ver todo el inventario.
+                {productsError
+                  ? 'Hubo un problema de conexión con el catálogo. Revisa tu conexión a internet e intenta recargar la página.'
+                  : 'No hay productos que cumplan con los filtros de búsqueda aplicados. Intenta restablecer los filtros para ver todo el inventario.'}
               </p>
               <button
                 type="button"
@@ -940,7 +987,7 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
       <WishlistSidebar
         isOpen={isWishlistOpen}
         onClose={() => setIsWishlistOpen(false)}
-        wishlistItems={SNEAKER_PRODUCTS.filter((product) => favoriteIds.includes(product.id))}
+        wishlistItems={products.filter((product) => favoriteIds.includes(product.id))}
         onRemove={handleToggleFavorite}
       />
 

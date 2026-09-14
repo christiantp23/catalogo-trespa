@@ -4,6 +4,7 @@ import {
     Heart, Star, CheckCheck, Smile, Paperclip, Camera, Mic, Play, Pause,
     Phone, Video, MoreVertical, ArrowLeft, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { fetchTestimonials } from '../lib/testimonials';
 
 // =========================================================================
 // 6. SECCIÓN DE TESTIMONIOS INTERACTIVA CON CARRUSEL Y VIDEO (TestimonialsSection)
@@ -214,35 +215,29 @@ export default function TestimonialsSection() {
     // 1. ESTADO DEL CARRUSEL: Almacena el índice de la tarjeta activa actual (0, 1, 2, etc.)
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    // Datos reales de los testimonios de WhatsApp. 
-    // Nota: Puedes subir tus capturas de pantalla reales de WhatsApp a /public/images/ y cambiar estas rutas.
-    const testimonials: ChatTestimonial[] = [
-        {
-            id: 'testimonial-1',
-            clientName: 'Santiago Cadavid',
-            phoneColor: 'bg-amber-400', // Botón amarillo
-            chatScreenshot: '/testimonios/santiago_medellin.webp',
-        },
-        {
-            id: 'testimonial-video-1',
-            clientName: 'Maria Camila',
-            phoneColor: 'bg-emerald-500', // Botón verde
-            videoUrl: '/testimonios/mc_medellin.mp4',
-            isVideo: true
-        },
-        {
-            id: 'testimonial-2',
-            clientName: 'Bibiana (Dabeiba)',
-            phoneColor: 'bg-rose-500', // Botón rojo metálico
-            chatScreenshot: '/testimonios/dabeiba.webp',
-        },
-        {
-            id: 'testimonial-3',
-            clientName: 'Dahiana',
-            phoneColor: 'bg-sky-500', // Botón azul metálico
-            chatScreenshot: '/testimonios/dahiana_medellin.webp',
-        }
-    ];
+    // Los testimonios ahora vienen de Supabase (antes eran un arreglo fijo acá) —
+    // se pueden agregar, reordenar o quitar desde el panel de administración,
+    // sin tocar código.
+    const [testimonials, setTestimonials] = useState<ChatTestimonial[]>([]);
+
+    useEffect(() => {
+        fetchTestimonials()
+            .then((rows) => {
+                setTestimonials(
+                    rows.map((t) => ({
+                        id: t.id,
+                        clientName: t.client_name,
+                        phoneColor: t.phone_color,
+                        chatScreenshot: t.chat_screenshot || undefined,
+                        videoUrl: t.video_url || undefined,
+                        isVideo: t.is_video,
+                    }))
+                );
+            })
+            .catch(() => {
+                // si falla la conexión, simplemente no se muestra la sección
+            });
+    }, []);
 
     // 3. FUNCIONES DE NAVEGACIÓN DEL CARRUSEL
     // - handlePrev: Retrocede una posición. Si está en la primera (0), da la vuelta al final.
@@ -254,6 +249,10 @@ export default function TestimonialsSection() {
     const handleNext = () => {
         setCurrentIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
     };
+
+    // Si todavía no cargaron testimonios (o no hay ninguno cargado en el panel),
+    // no mostramos la sección en vez de mostrarla rota/vacía.
+    if (testimonials.length === 0) return null;
 
     return (
         <section id="testimonials-section" className="py-24 bg-slate-150 border-t border-slate-200 relative overflow-hidden">
