@@ -23,10 +23,7 @@
 #   autorizado explícitamente. Dominios reales que usa el sitio:
 #     - fonts.googleapis.com / fonts.gstatic.com: tipografía (Google Fonts,
 #       importada en src/index.css)
-#     - hdxcyvczbhmemjbdkjdh.supabase.co: API, autenticación y Storage de
-#       imágenes de Supabase — usado tanto por la tienda pública como por
-#       el panel admin (mismo cliente en src/lib/supabase.ts, no hay una
-#       API ni CDN aparte para el admin)
+#    
 #     - images.unsplash.com: fotos de respaldo de productos (fallback
 #       cuando falta una imagen propia)
 #   Los enlaces a WhatsApp, Telegram, Instagram, Facebook y TikTok del
