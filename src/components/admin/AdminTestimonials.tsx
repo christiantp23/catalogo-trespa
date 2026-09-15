@@ -1,5 +1,5 @@
 import { useEffect, useState, ChangeEvent } from 'react';
-import { Plus, Trash2, Upload, Loader2, ChevronUp, ChevronDown, Video, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Upload, Loader2, ChevronUp, ChevronDown, Video, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import {
   DbTestimonial,
   fetchAdminTestimonials,
@@ -28,12 +28,20 @@ const PHONE_COLORS = [
   { value: 'bg-violet-500', label: 'Violeta' },
 ];
 
+const DEFAULT_CUSTOM_COLOR = '#F59E0B';
+
+// phone_color se guarda como clase de Tailwind (ej. 'bg-amber-400') o, para
+// la opción "Personalizado", como código hexadecimal (ej. '#F59E0B'). Un
+// valor que empieza con '#' es hex; cualquier otra cosa se trata como clase.
+const isHexColor = (value: string) => value.startsWith('#');
+
 export default function AdminTestimonials() {
   const [testimonials, setTestimonials] = useState<DbTestimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState<string | 'new' | null>(null);
   const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PHONE_COLORS[0].value);
@@ -117,6 +125,8 @@ export default function AdminTestimonials() {
       setNewIsVideo(false);
       setNewErrors({});
       setNewTouched({});
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el testimonio');
@@ -169,28 +179,28 @@ export default function AdminTestimonials() {
     }
   };
 
-  if (loading) return <div className="text-center py-16 text-sm text-slate-400">Cargando testimonios...</div>;
+  if (loading) return <div className="text-center py-16 text-sm text-slate-400 dark:text-slate-500">Cargando testimonios...</div>;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-      <h1 className="font-display font-bold text-lg text-slate-900 mb-1">Testimonios</h1>
-      <p className="text-xs text-slate-400 mb-6">
+      <h1 className="font-display font-bold text-lg text-slate-900 dark:text-white mb-1">Testimonios</h1>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Capturas de chat o videos de clientes reales que se muestran en la sección de testimonios de la tienda.
       </p>
 
       {error && (
-        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5 mb-4">{error}</p>
+        <p className="text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900 rounded-xl px-3 py-2.5 mb-4">{error}</p>
       )}
 
       <div className="space-y-3 mb-6">
         {testimonials.map((t, i) => (
-          <div key={t.id} className="flex items-center gap-3 bg-white border border-slate-100 rounded-2xl p-3 shadow-xs">
+          <div key={t.id} className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 shadow-xs">
             <div className="flex flex-col gap-0.5 shrink-0">
               <button
                 title="Mover arriba"
                 disabled={i === 0}
                 onClick={() => handleMove(i, -1)}
-                className="text-slate-300 hover:text-brand-blue disabled:opacity-30"
+                className="text-slate-300 hover:text-brand-blue dark:text-slate-600 dark:hover:text-brand-sky disabled:opacity-30"
               >
                 <ChevronUp className="w-3.5 h-3.5" />
               </button>
@@ -198,14 +208,14 @@ export default function AdminTestimonials() {
                 title="Mover abajo"
                 disabled={i === testimonials.length - 1}
                 onClick={() => handleMove(i, 1)}
-                className="text-slate-300 hover:text-brand-blue disabled:opacity-30"
+                className="text-slate-300 hover:text-brand-blue dark:text-slate-600 dark:hover:text-brand-sky disabled:opacity-30"
               >
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
             </div>
 
             <label
-              className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-slate-100 cursor-pointer group"
+              className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group"
               title={uploadingId === t.id ? (uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...') : undefined}
             >
               {t.is_video ? (
@@ -236,15 +246,19 @@ export default function AdminTestimonials() {
             </label>
 
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-slate-900 truncate">{t.client_name}</p>
-              <p className="text-[11px] text-slate-400">{t.is_video ? 'Video' : 'Captura de chat'}</p>
+              <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{t.client_name}</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">{t.is_video ? 'Video' : 'Captura de chat'}</p>
             </div>
 
-            <span className={`w-3 h-3 rounded-full ${t.phone_color} shrink-0`} title="Color del mockup" />
+            <span
+              className={`w-3 h-3 rounded-full shrink-0 ${isHexColor(t.phone_color) ? '' : t.phone_color}`}
+              style={isHexColor(t.phone_color) ? { backgroundColor: t.phone_color } : undefined}
+              title="Color del mockup"
+            />
 
             <button
               onClick={() => handleDelete(t.id)}
-              className="p-2 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
+              className="p-2 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-600 dark:hover:text-rose-400 dark:hover:bg-rose-950/40 transition-colors shrink-0"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -253,8 +267,8 @@ export default function AdminTestimonials() {
       </div>
 
       {/* Agregar nuevo testimonio */}
-      <div className="border border-dashed border-slate-200 rounded-2xl p-4 bg-white">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Agregar testimonio</p>
+      <div className="border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4 bg-white dark:bg-slate-900">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Agregar testimonio</p>
         <div className="space-y-3">
           <div>
             <input
@@ -263,10 +277,10 @@ export default function AdminTestimonials() {
               onChange={(e) => handleNewNameChange(e.target.value)}
               onBlur={handleNewNameBlur}
               placeholder="Nombre del cliente"
-              className={`w-full text-sm px-4 py-2.5 border outline-none rounded-xl transition-all ${
+              className={`w-full text-sm px-4 py-2.5 border outline-none rounded-xl transition-all dark:text-white ${
                 newErrors.name && newTouched.name
-                  ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                  : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                  ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                  : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
               }`}
             />
             {newErrors.name && newTouched.name && (
@@ -277,27 +291,45 @@ export default function AdminTestimonials() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 shrink-0">Color del mockup:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">Color del mockup:</span>
             {PHONE_COLORS.map((c) => (
               <button
                 key={c.value}
                 type="button"
                 onClick={() => setNewColor(c.value)}
                 className={`w-6 h-6 rounded-full ${c.value} ${
-                  newColor === c.value ? 'ring-2 ring-offset-2 ring-brand-blue' : ''
+                  newColor === c.value ? 'ring-2 ring-offset-2 ring-brand-blue dark:ring-offset-slate-900' : ''
                 }`}
                 title={c.label}
               />
             ))}
+            <button
+              type="button"
+              onClick={() => setNewColor(isHexColor(newColor) ? newColor : DEFAULT_CUSTOM_COLOR)}
+              className={`w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 ${
+                isHexColor(newColor) ? 'ring-2 ring-offset-2 ring-brand-blue dark:ring-offset-slate-900' : ''
+              }`}
+              style={{ backgroundColor: isHexColor(newColor) ? newColor : DEFAULT_CUSTOM_COLOR }}
+              title="Personalizado"
+            />
+            {isHexColor(newColor) && (
+              <input
+                type="color"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer bg-transparent p-0.5"
+                title="Elegir color personalizado"
+              />
+            )}
           </div>
 
           <div>
             <label
               className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed text-sm font-semibold cursor-pointer transition-colors ${
                 newErrors.media && newTouched.media
-                  ? 'border-rose-300 text-rose-500 hover:border-rose-400'
-                  : 'border-slate-200 text-slate-500 hover:border-brand-blue hover:text-brand-blue'
+                  ? 'border-rose-300 dark:border-rose-800 text-rose-500 dark:text-rose-400 hover:border-rose-400'
+                  : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-brand-blue hover:text-brand-blue'
               }`}
             >
               {uploadingId === 'new' ? (
@@ -330,10 +362,20 @@ export default function AdminTestimonials() {
 
           <button
             onClick={handleAdd}
-            disabled={uploadingId === 'new'}
-            className="flex items-center justify-center gap-1.5 w-full py-3 rounded-2xl bg-brand-blue hover:bg-slate-950 text-white text-sm font-bold transition-colors disabled:opacity-60"
+            disabled={uploadingId === 'new' || saved}
+            className={`flex items-center justify-center gap-1.5 w-full py-3 rounded-2xl text-white text-sm font-bold transition-colors disabled:opacity-100 ${
+              saved ? 'bg-emerald-500' : 'bg-brand-blue hover:bg-slate-950 disabled:opacity-60'
+            }`}
           >
-            <Plus className="w-4 h-4" /> Agregar testimonio
+            {saved ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" /> ¡Guardado!
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" /> Agregar testimonio
+              </>
+            )}
           </button>
         </div>
       </div>

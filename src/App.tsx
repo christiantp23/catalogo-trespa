@@ -285,7 +285,7 @@ function FilterPanelBody({
 
 
 export default function App() {
-  const { bannerText } = useSiteSettings();
+  const { bannerText, whatsappNumber, telegramLink, maintenanceMode, settingsLoaded } = useSiteSettings();
   // ==========================================
   // 1. PERSISTENCIA LOCAL DEL CARRITO (localStorage)
   // ==========================================
@@ -699,6 +699,50 @@ export default function App() {
     }).format(value);
 
   const isPriceFiltered = priceInitialized && (minPrice > 0 || maxPrice < catalogMaxPrice);
+
+  // Modo mantenimiento: reemplaza todo el catálogo por una pantalla simple
+  // "Volvemos pronto". Solo afecta al sitio público (#admin nunca pasa por
+  // este componente, así que el dueño siempre puede entrar a apagarlo).
+  // Esperamos a que cargue la configuración (settingsLoaded) antes de
+  // decidir, para no mostrar el catálogo un instante y luego taparlo.
+  if (settingsLoaded && maintenanceMode) {
+    const supportText = encodeURIComponent(
+      'Hola Trespa Store 👋, vi que la tienda está en mantenimiento y quería consultar disponibilidad.'
+    );
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
+        <div className="max-w-md w-full text-center space-y-6">
+          <img src="/logo-trimmed.webp" alt="Trespa Store" className="h-14 w-auto object-contain mx-auto" />
+          <div className="space-y-2">
+            <h1 className="font-display font-black text-2xl sm:text-3xl uppercase tracking-tight">Volvemos pronto</h1>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Estamos haciendo algunos ajustes en la tienda. Mientras tanto, podés escribirnos y te ayudamos igual.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={`https://wa.me/${whatsappNumber}?text=${supportText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-white text-sm font-bold transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" /> Escribinos por WhatsApp
+            </a>
+            {telegramLink && (
+              <a
+                href={telegramLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold transition-colors border border-white/10"
+              >
+                <Send className="w-4 h-4" /> Telegram
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 font-sans selection:bg-brand-sky/30 selection:text-brand-blue">

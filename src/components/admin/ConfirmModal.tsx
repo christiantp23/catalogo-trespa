@@ -42,26 +42,28 @@ export default function ConfirmModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-white rounded-[28px] shadow-xl p-6"
+        className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[28px] shadow-xl p-6"
       >
         <div className="flex items-center gap-3 mb-3">
           <div
             className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-              isDangerous ? 'bg-rose-50 text-rose-600' : 'bg-sky-50 text-sky-600'
+              isDangerous
+                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
+                : 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400'
             }`}
           >
             <AlertTriangle className="w-5 h-5" />
           </div>
-          <h2 className="font-display font-bold text-lg text-slate-900">{title}</h2>
+          <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">{title}</h2>
         </div>
 
-        <p className="text-sm text-slate-500 mb-6">{message}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{message}</p>
 
         <div className="flex gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-3 rounded-2xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+            className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             {cancelText}
           </button>

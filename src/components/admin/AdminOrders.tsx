@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   CheckCircle2,
   XCircle,
@@ -14,6 +15,8 @@ import {
   Download,
   Calendar,
   Clock,
+  BellRing,
+  X,
 } from 'lucide-react';
 import {
   DbOrder,
@@ -89,6 +92,16 @@ function escapeCsvValue(value: string | number): string {
 
 type FilterValue = OrderStatus | 'Todas';
 
+interface NewOrderToast {
+  id: string;
+  customerName: string;
+  total: number;
+}
+
+// Cada cuánto se revisa si hay órdenes nuevas mientras el panel de Ventas
+// está abierto (45-60s, en el medio de ese rango).
+const NEW_ORDER_POLL_MS = 50000;
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<DbOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,17 +117,56 @@ export default function AdminOrders() {
 
   const [productsMap, setProductsMap] = useState<Map<string, DbProduct>>(new Map());
 
+  // IDs de órdenes ya vistas, para detectar cuáles son nuevas en cada
+  // poll — no dispara toasts en la primera carga, solo cuando aparece algo
+  // que no estaba antes.
+  const knownOrderIdsRef = useRef<Set<string> | null>(null);
+  const [newOrderToasts, setNewOrderToasts] = useState<NewOrderToast[]>([]);
+
   const load = async () => {
     setLoading(true);
     setIsSyncing(true);
     setError(null);
     try {
-      setOrders(await fetchOrders());
+      const data = await fetchOrders();
+      setOrders(data);
+      knownOrderIdsRef.current = new Set(data.map((o) => o.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron cargar las ventas');
     } finally {
       setLoading(false);
       setIsSyncing(false);
+    }
+  };
+
+  const dismissToast = (id: string) => {
+    setNewOrderToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Revisa en silencio si hay órdenes nuevas (sin mostrar el spinner de
+  // "Sincronizando..." ni tocar loading/error, para no interrumpir lo que
+  // el admin esté mirando) y muestra un toast visual por cada una — sin
+  // sonido, que suele molestar más de lo que ayuda en un panel web.
+  const pollForNewOrders = async () => {
+    try {
+      const fresh = await fetchOrders();
+      const known = knownOrderIdsRef.current;
+      if (known) {
+        const newOnes = fresh.filter((o) => !known.has(o.id));
+        if (newOnes.length > 0) {
+          setNewOrderToasts((prev) => [
+            ...prev,
+            ...newOnes.map((o) => ({ id: o.id, customerName: o.customer_name, total: o.total })),
+          ]);
+          newOnes.forEach((o) => {
+            setTimeout(() => dismissToast(o.id), 8000);
+          });
+        }
+      }
+      knownOrderIdsRef.current = new Set(fresh.map((o) => o.id));
+      setOrders(fresh);
+    } catch {
+      // si falla el poll silencioso, no interrumpimos al admin con un error
     }
   };
 
@@ -124,6 +176,11 @@ export default function AdminOrders() {
     fetchAdminProducts({ includeArchived: true })
       .then((products) => setProductsMap(new Map(products.map((p) => [p.id, p]))))
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(pollForNewOrders, NEW_ORDER_POLL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   const confirmed = useMemo(() => orders.filter((o) => o.status === 'confirmada'), [orders]);
@@ -273,18 +330,18 @@ export default function AdminOrders() {
       <div className="flex items-center justify-between flex-wrap gap-2 mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display font-bold text-lg text-slate-900 leading-tight">Ventas</h1>
+            <h1 className="font-display font-bold text-lg text-slate-900 dark:text-white leading-tight">Ventas</h1>
             {isSyncing ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> Sincronizando...
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Sincronizado
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             {pendingCount > 0
               ? `${pendingCount} solicitud${pendingCount === 1 ? '' : 'es'} esperando confirmación`
               : 'Sin solicitudes pendientes'}
@@ -292,10 +349,10 @@ export default function AdminOrders() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Total de ventas</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">Total de ventas</span>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-brand-blue hover:text-brand-blue transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-blue hover:text-brand-blue transition-colors"
           >
             <Download className="w-3.5 h-3.5" /> Descargar CSV
           </button>
@@ -304,61 +361,61 @@ export default function AdminOrders() {
 
       {/* Resumen financiero — calculado solo sobre ventas confirmadas */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
             <TrendingUp className="w-3.5 h-3.5" /> Hoy
           </p>
-          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+          <p className="font-display font-bold text-lg dark:brightness-125" style={{ color: '#1E2568' }}>
             {formatPrice(metrics.todayTotal)}
           </p>
         </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
             <TrendingUp className="w-3.5 h-3.5" /> Esta semana
           </p>
-          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+          <p className="font-display font-bold text-lg dark:brightness-125" style={{ color: '#1E2568' }}>
             {formatPrice(metrics.weekTotal)}
           </p>
-          <p className={`text-[10px] font-semibold mt-0.5 ${metrics.weekChangePct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <p className={`text-[10px] font-semibold mt-0.5 ${metrics.weekChangePct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
             {metrics.weekChangePct >= 0 ? '+' : ''}
             {metrics.weekChangePct.toFixed(0)}% vs semana anterior
           </p>
         </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
             <TrendingUp className="w-3.5 h-3.5" /> Este mes
           </p>
-          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+          <p className="font-display font-bold text-lg dark:brightness-125" style={{ color: '#1E2568' }}>
             {formatPrice(metrics.monthTotal)}
           </p>
         </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
             <Receipt className="w-3.5 h-3.5" /> Ticket promedio
           </p>
-          <p className="font-display font-bold text-lg" style={{ color: '#1E2568' }}>
+          <p className="font-display font-bold text-lg dark:brightness-125" style={{ color: '#1E2568' }}>
             {formatPrice(metrics.avgTicket)}
           </p>
         </div>
-        <div className="rounded-2xl p-4 shadow-xs border" style={{ backgroundColor: '#FFD10015', borderColor: '#FFD10060' }}>
+        <div className="rounded-2xl p-4 shadow-xs border dark:brightness-110" style={{ backgroundColor: '#FFD10015', borderColor: '#FFD10060' }}>
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-1">
             <Clock className="w-3.5 h-3.5" /> Pendiente de confirmar
           </p>
           <p className="font-display font-bold text-lg text-amber-800">{formatPrice(metrics.pendingTotal)}</p>
         </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-xs">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
             <Trophy className="w-3.5 h-3.5" /> Top 3 productos (mes)
           </p>
           {metrics.topProducts.length === 0 ? (
-            <p className="text-xs text-slate-400">Sin ventas aún</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Sin ventas aún</p>
           ) : (
             <table className="w-full text-xs">
               <tbody>
                 {metrics.topProducts.map(([name, qty]) => (
                   <tr key={name}>
-                    <td className="py-0.5 text-slate-700 truncate max-w-[140px]">{name}</td>
-                    <td className="py-0.5 text-right font-bold text-slate-900">{qty}</td>
+                    <td className="py-0.5 text-slate-700 dark:text-slate-300 truncate max-w-[140px]">{name}</td>
+                    <td className="py-0.5 text-right font-bold text-slate-900 dark:text-white">{qty}</td>
                   </tr>
                 ))}
               </tbody>
@@ -374,27 +431,27 @@ export default function AdminOrders() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Buscar por nombre, teléfono, cédula o ID..."
-          className="w-full text-sm pl-10 pr-4 py-2.5 bg-white border border-slate-100 focus:border-brand-blue outline-none rounded-2xl transition-all shadow-xs"
+          className="w-full text-sm pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 dark:text-white border border-slate-100 dark:border-slate-800 focus:border-brand-blue outline-none rounded-2xl transition-all shadow-xs"
         />
       </div>
 
       {/* Filtro de fecha */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
-        <div className="flex items-center gap-1.5 text-slate-400">
+        <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
           <Calendar className="w-4 h-4" />
         </div>
         <input
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-100 bg-white text-slate-600 outline-none shadow-xs"
+          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 outline-none shadow-xs"
         />
-        <span className="text-xs text-slate-400">a</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">a</span>
         <input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-100 bg-white text-slate-600 outline-none shadow-xs"
+          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 outline-none shadow-xs"
         />
         {hasDateFilter && (
           <button
@@ -402,7 +459,7 @@ export default function AdminOrders() {
               setDateFrom('');
               setDateTo('');
             }}
-            className="text-xs font-semibold px-3 py-2 rounded-xl text-slate-400 hover:text-slate-600"
+            className="text-xs font-semibold px-3 py-2 rounded-xl text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
           >
             Limpiar
           </button>
@@ -425,7 +482,7 @@ export default function AdminOrders() {
             className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap border transition-colors ${
               filter === value
                 ? 'bg-brand-blue text-white border-brand-blue'
-                : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
             }`}
           >
             {label}
@@ -433,70 +490,70 @@ export default function AdminOrders() {
         ))}
       </div>
 
-      {loading && <div className="text-center py-16 text-sm text-slate-400">Cargando ventas...</div>}
+      {loading && <div className="text-center py-16 text-sm text-slate-400 dark:text-slate-500">Cargando ventas...</div>}
       {error && !loading && (
-        <div className="text-center py-16 text-sm text-rose-600 bg-rose-50 rounded-2xl border border-rose-100">{error}</div>
+        <div className="text-center py-16 text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 rounded-2xl border border-rose-100 dark:border-rose-900">{error}</div>
       )}
 
       {!loading && !error && (
-        <div className="bg-white border border-slate-100 rounded-[28px] shadow-xs overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs overflow-hidden">
           {dateFiltered.length === 0 ? (
-            <div className="text-center py-16 text-sm text-slate-400">No hay solicitudes en esta vista.</div>
+            <div className="text-center py-16 text-sm text-slate-400 dark:text-slate-500">No hay solicitudes en esta vista.</div>
           ) : (
             dateFiltered.map((o) => {
               const isExpanded = expanded.has(o.id);
               return (
-                <div key={o.id} className="border-b border-slate-50 last:border-0">
+                <div key={o.id} className="border-b border-slate-50 dark:border-slate-800 last:border-0">
                   <button
                     onClick={() => toggleExpand(o.id)}
-                    className="flex items-center gap-3 w-full text-left px-4 sm:px-6 py-4 hover:bg-slate-50/50 transition-colors"
+                    className="flex items-center gap-3 w-full text-left px-4 sm:px-6 py-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
                       <Package className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-slate-900 truncate">{o.customer_name}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{o.customer_name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
                         {formatDate(o.created_at)} · {(o.order_items || []).length} producto
                         {(o.order_items || []).length === 1 ? '' : 's'}
                       </p>
                     </div>
-                    <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border shrink-0 ${STATUS_STYLE[o.status]}`}>
+                    <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border shrink-0 dark:brightness-110 ${STATUS_STYLE[o.status]}`}>
                       {STATUS_LABEL[o.status]}
                     </span>
-                    <p className="font-display font-bold text-sm text-slate-900 shrink-0 w-24 text-right">
+                    <p className="font-display font-bold text-sm text-slate-900 dark:text-white shrink-0 w-24 text-right">
                       {formatPrice(o.total)}
                     </p>
                     {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-slate-300 shrink-0" />
+                      <ChevronUp className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-300 shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
                     )}
                   </button>
 
                   {isExpanded && (
                     <div className="px-4 sm:px-6 pb-4 -mt-1">
-                      <div className="bg-slate-50/60 rounded-2xl p-4 space-y-2">
+                      <div className="bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl p-4 space-y-2">
                         {(o.order_items || []).map((item) => (
                           <div key={item.id} className="flex items-center gap-3 text-xs">
                             <img
                               src={getItemImage(item, productsMap)}
                               alt={item.product_name}
-                              className="w-12 h-12 rounded-xl object-cover bg-slate-100 shrink-0"
+                              className="w-12 h-12 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shrink-0"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = '/logo.webp';
                               }}
                             />
-                            <span className="flex-1 min-w-0 text-slate-600 truncate">
+                            <span className="flex-1 min-w-0 text-slate-600 dark:text-slate-300 truncate">
                               {item.product_name} · {item.colorway} · Talla {item.size} × {item.quantity}
                             </span>
-                            <span className="font-semibold text-slate-900 shrink-0">
+                            <span className="font-semibold text-slate-900 dark:text-white shrink-0">
                               {formatPrice(item.price_at_time * item.quantity)}
                             </span>
                           </div>
                         ))}
 
-                        <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                           <span>{o.phone}</span>
                           {o.city && <span>· {o.city}</span>}
                           {o.cedula && <span>· CC {o.cedula}</span>}
@@ -507,7 +564,7 @@ export default function AdminOrders() {
                             href={`https://wa.me/${o.phone.replace(/\D/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 hover:bg-emerald-100 dark:hover:bg-emerald-950/70"
                           >
                             <MessageCircle className="w-3.5 h-3.5" /> Contactar
                           </a>
@@ -524,7 +581,7 @@ export default function AdminOrders() {
                               <button
                                 disabled={busyId === o.id}
                                 onClick={() => handleCancel(o.id)}
-                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-60"
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900 hover:bg-rose-100 dark:hover:bg-rose-950/70 disabled:opacity-60"
                               >
                                 <XCircle className="w-3.5 h-3.5" /> Cancelar
                               </button>
@@ -535,7 +592,7 @@ export default function AdminOrders() {
                             <button
                               disabled={busyId === o.id}
                               onClick={() => handleRevert(o.id)}
-                              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl text-slate-500 border border-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
                             >
                               <RotateCcw className="w-3.5 h-3.5" /> Volver a pendiente
                             </button>
@@ -550,6 +607,38 @@ export default function AdminOrders() {
           )}
         </div>
       )}
+
+      {/* Notificaciones de venta nueva: solo visuales, sin sonido — se
+          detectan comparando los IDs de órdenes ya vistos contra los que
+          trae cada poll silencioso. */}
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 w-full max-w-xs pointer-events-none px-4 sm:px-0">
+        <AnimatePresence>
+          {newOrderToasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="pointer-events-auto bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl rounded-2xl p-4 flex items-start gap-3"
+            >
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <BellRing className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-slate-900 dark:text-white">¡Venta nueva!</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{t.customerName}</p>
+                <p className="text-xs font-semibold text-brand-blue dark:text-brand-sky mt-0.5">{formatPrice(t.total)}</p>
+              </div>
+              <button
+                onClick={() => dismissToast(t.id)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,10 @@ export interface SiteSettings {
   whatsapp_number: string;
   telegram_link: string | null;
   banner_text: string;
+  instagram_link: string | null;
+  facebook_link: string | null;
+  business_hours: string | null;
+  maintenance_mode: boolean;
   updated_at: string;
 }
 
@@ -15,7 +19,18 @@ export async function fetchSiteSettings(): Promise<SiteSettings> {
 }
 
 export async function updateSiteSettings(
-  input: Partial<Pick<SiteSettings, 'whatsapp_number' | 'telegram_link' | 'banner_text'>>
+  input: Partial<
+    Pick<
+      SiteSettings,
+      | 'whatsapp_number'
+      | 'telegram_link'
+      | 'banner_text'
+      | 'instagram_link'
+      | 'facebook_link'
+      | 'business_hours'
+      | 'maintenance_mode'
+    >
+  >
 ): Promise<void> {
   await sbRest('site_settings?id=eq.1', { method: 'PATCH', useAuth: true, body: input });
 }
@@ -51,5 +66,7 @@ export function useSiteSettings() {
     whatsappNumber: settings?.whatsapp_number || FALLBACK_WHATSAPP,
     telegramLink: settings?.telegram_link || null,
     bannerText: settings?.banner_text || 'Envío gratis a toda Colombia',
+    maintenanceMode: settings?.maintenance_mode || false,
+    settingsLoaded: settings !== null,
   };
 }

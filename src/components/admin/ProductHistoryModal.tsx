@@ -65,40 +65,40 @@ export default function ProductHistoryModal({ productId, productName, onClose }:
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-white rounded-[28px] shadow-xl max-h-[80vh] overflow-y-auto"
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[28px] shadow-xl max-h-[80vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 sticky top-0 bg-white rounded-t-[28px] z-10">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 rounded-t-[28px] z-10">
           <div>
-            <h2 className="font-display font-bold text-lg text-slate-900">Historial de cambios</h2>
-            <p className="text-xs text-slate-400 truncate">{productName}</p>
+            <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">Historial de cambios</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{productName}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50">
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 dark:text-slate-500 dark:hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="px-6 py-5">
           {loading && (
-            <div className="flex items-center justify-center py-12 text-slate-400">
+            <div className="flex items-center justify-center py-12 text-slate-400 dark:text-slate-500">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           )}
 
           {error && !loading && (
-            <div className="text-center py-8 text-sm text-rose-600 bg-rose-50 rounded-2xl border border-rose-100">
+            <div className="text-center py-8 text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 rounded-2xl border border-rose-100 dark:border-rose-900">
               {error}
             </div>
           )}
 
           {!loading && !error && history.length === 0 && (
-            <div className="text-center py-8 text-sm text-slate-400">Sin cambios registrados todavía.</div>
+            <div className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">Sin cambios registrados todavía.</div>
           )}
 
           {!loading && !error && history.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-left text-slate-400 border-b border-slate-100">
+                  <tr className="text-left text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
                     <th className="py-2 pr-3 font-semibold uppercase tracking-wider">Fecha</th>
                     <th className="py-2 pr-3 font-semibold uppercase tracking-wider">Campo</th>
                     <th className="py-2 pr-3 font-semibold uppercase tracking-wider">Valor anterior</th>
@@ -108,14 +108,14 @@ export default function ProductHistoryModal({ productId, productName, onClose }:
                 </thead>
                 <tbody>
                   {history.map((h) => (
-                    <tr key={h.id} className="border-b border-slate-50 last:border-0">
-                      <td className="py-2.5 pr-3 text-slate-500 whitespace-nowrap">{formatDate(h.changed_at)}</td>
-                      <td className="py-2.5 pr-3 text-slate-700 font-medium">{h.field_changed || '—'}</td>
-                      <td className="py-2.5 pr-3 text-slate-400 max-w-[140px] truncate">{h.old_value ?? '—'}</td>
-                      <td className="py-2.5 pr-3 text-slate-900 max-w-[140px] truncate">{h.new_value ?? '—'}</td>
+                    <tr key={h.id} className="border-b border-slate-50 dark:border-slate-800 last:border-0">
+                      <td className="py-2.5 pr-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDate(h.changed_at)}</td>
+                      <td className="py-2.5 pr-3 text-slate-700 dark:text-slate-300 font-medium">{h.field_changed || '—'}</td>
+                      <td className="py-2.5 pr-3 text-slate-400 dark:text-slate-500 max-w-[140px] truncate">{h.old_value ?? '—'}</td>
+                      <td className="py-2.5 pr-3 text-slate-900 dark:text-white max-w-[140px] truncate">{h.new_value ?? '—'}</td>
                       <td className="py-2.5">
                         <span
-                          className={`text-[10px] font-bold px-2 py-1 rounded-full border whitespace-nowrap ${CHANGE_TYPE_STYLE[h.change_type]}`}
+                          className={`text-[10px] font-bold px-2 py-1 rounded-full border whitespace-nowrap dark:brightness-110 ${CHANGE_TYPE_STYLE[h.change_type]}`}
                         >
                           {CHANGE_TYPE_LABEL[h.change_type]}
                         </span>

@@ -89,7 +89,14 @@ function TestimonialPhone({ chat, isActive }: { chat: ChatTestimonial; isActive:
             <div className="absolute top-44 -left-2.5 w-1 h-12 bg-slate-800 rounded-l-md z-10" />
 
             {/* Botón Físico Derecho (Encendido / Botón de Color Personalizado) */}
-            <div className={`absolute top-32 -right-2.5 w-1 h-16 ${chat.phoneColor} rounded-r-md z-10 shadow-sm transition-colors`} />
+            {/* phone_color viene de Supabase como clase de Tailwind (ej. 'bg-amber-400')
+                o, si se eligió "Personalizado" en el admin, como hex (ej. '#F59E0B') */}
+            <div
+              className={`absolute top-32 -right-2.5 w-1 h-16 rounded-r-md z-10 shadow-sm transition-colors ${
+                chat.phoneColor.startsWith('#') ? '' : chat.phoneColor
+              }`}
+              style={chat.phoneColor.startsWith('#') ? { backgroundColor: chat.phoneColor } : undefined}
+            />
 
             {/* Chasis Exterior del Celular */}
             <div className="relative rounded-[48px] border-[10px] border-slate-900 bg-slate-950 p-1 shadow-2xl ring-1 ring-slate-900/10 overflow-hidden">

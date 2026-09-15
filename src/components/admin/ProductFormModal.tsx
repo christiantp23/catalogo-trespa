@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import { X, AlertCircle, Upload, Loader2, ImageOff, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { X, AlertCircle, Upload, Loader2, ImageOff, Plus, Trash2, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
   DbProduct,
@@ -154,6 +154,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ProductField, string>>>({});
@@ -458,10 +459,13 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
       await saveColorways(productId);
 
-      onSaved();
+      // Mostramos la confirmación notoria (check verde) antes de cerrar el
+      // modal, en vez de cerrarlo de una, para que quede claro que se guardó.
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => onSaved(), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el producto');
-    } finally {
       setSaving(false);
     }
   };
@@ -566,20 +570,20 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-white rounded-[28px] shadow-xl max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[28px] shadow-xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 sticky top-0 bg-white rounded-t-[28px] z-10">
-          <h2 className="font-display font-bold text-lg text-slate-900">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 rounded-t-[28px] z-10">
+          <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">
             {isEditing ? 'Editar producto' : 'Nuevo producto'}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50">
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 dark:text-slate-500 dark:hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
               Nombre del modelo *
             </label>
             <input
@@ -588,10 +592,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               onChange={(e) => setName(e.target.value)}
               onBlur={() => handleFieldBlur('name')}
               placeholder="Ej: New Balance 9060"
-              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
                 fieldErrors.name && fieldTouched.name
-                  ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                  : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                  ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                  : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
               }`}
             />
             {fieldErrors.name && fieldTouched.name && (
@@ -604,7 +608,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
                 Marca *
               </label>
               <input
@@ -613,10 +617,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 onChange={(e) => setBrand(e.target.value)}
                 onBlur={() => handleFieldBlur('brand')}
                 placeholder="Nike, Adidas..."
-                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
                   fieldErrors.brand && fieldTouched.brand
-                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
                 }`}
               />
               {fieldErrors.brand && fieldTouched.brand && (
@@ -627,7 +631,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               )}
             </div>
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
                 Género
               </label>
               <select
@@ -635,10 +639,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
                 onBlur={() => handleFieldBlur('gender')}
-                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
                   fieldErrors.gender && fieldTouched.gender
-                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
                 }`}
               >
                 <option value="Dama">Dama</option>
@@ -655,7 +659,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
               Categoría (estilo de la ficha)
             </label>
             <select
@@ -671,10 +675,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 }
               }}
               onBlur={() => handleFieldBlur('style')}
-              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
                 fieldErrors.style && fieldTouched.style
-                  ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                  : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                  ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                  : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
               }`}
             >
               {existingStyles.map((s) => (
@@ -693,10 +697,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 onBlur={() => handleFieldBlur('style')}
                 placeholder="Nombre de la nueva categoría (ej: Deportivo)"
                 autoFocus
-                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all mt-2 ${
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white mt-2 ${
                   fieldErrors.style && fieldTouched.style
-                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
                 }`}
               />
             )}
@@ -709,7 +713,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
               Descripción
             </label>
             <textarea
@@ -717,12 +721,12 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Descripción del modelo, en el tono de Trespa Store"
-              className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl resize-none"
+              className="w-full text-sm px-4 py-3 bg-slate-50/60 dark:bg-slate-800/60 dark:text-white border border-slate-100 dark:border-slate-700 focus:border-brand-blue outline-none rounded-2xl resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
               Fotos del producto
             </label>
 
@@ -733,7 +737,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                     <img
                       src={url}
                       alt=""
-                      className="w-16 h-16 rounded-xl object-cover bg-slate-100 border border-slate-100"
+                      className="w-16 h-16 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
                     />
                     <button
                       type="button"
@@ -748,7 +752,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               </div>
             )}
 
-            <label className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors">
+            <label className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-semibold cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors">
               {uploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" /> {uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...'}
@@ -769,22 +773,22 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               />
             </label>
             {images.length === 0 && !uploading && (
-              <p className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-1.5">
+              <p className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
                 <ImageOff className="w-3.5 h-3.5" /> Todavía no agregaste fotos
               </p>
             )}
           </div>
 
           {/* ================= COLORES Y TALLAS (todo en el mismo formulario) ================= */}
-          <div className="pt-2 border-t border-slate-50">
+          <div className="pt-2 border-t border-slate-50 dark:border-slate-800">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Colores y tallas
               </label>
               <button
                 type="button"
                 onClick={() => setShowSizeGuide((v) => !v)}
-                className="flex items-center gap-1 text-[11px] font-semibold text-brand-blue"
+                className="flex items-center gap-1 text-[11px] font-semibold text-brand-blue dark:text-brand-sky"
               >
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSizeGuide ? 'rotate-180' : ''}`} />
                 {showSizeGuide ? 'Ocultar' : 'Ver'} guía de tallas
@@ -794,14 +798,14 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
             {showSizeGuide && (
               <div className="grid sm:grid-cols-2 gap-3 mb-4">
                 {(['Hombre', 'Mujer'] as const).map((g) => (
-                  <div key={g} className="border border-slate-100 rounded-xl overflow-hidden">
+                  <div key={g} className="border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
                     <div className="bg-slate-900 text-white text-center text-[11px] font-bold py-1.5 tracking-wide">
                       TALLAS {g.toUpperCase()}
                     </div>
                     <table className="w-full text-center text-[11px]">
                       <thead>
-                        <tr className="text-slate-400 border-b border-slate-100">
-                          <th className="py-1 font-bold text-brand-blue bg-sky-50">EUR</th>
+                        <tr className="text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
+                          <th className="py-1 font-bold text-brand-blue dark:text-brand-sky bg-sky-50 dark:bg-sky-950/40">EUR</th>
                           <th className="py-1 font-semibold">CO</th>
                           <th className="py-1 font-semibold">US</th>
                           <th className="py-1 font-semibold">CM</th>
@@ -809,11 +813,11 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                       </thead>
                       <tbody>
                         {SIZE_GUIDE_TABLE[g].map((row) => (
-                          <tr key={row.eur} className="border-b border-slate-50 last:border-0">
-                            <td className="py-1 font-bold text-brand-blue bg-sky-50/60">{row.eur}</td>
-                            <td className="py-1 text-slate-500">{row.co}</td>
-                            <td className="py-1 text-slate-500">{row.us}</td>
-                            <td className="py-1 text-slate-500">{row.cm}</td>
+                          <tr key={row.eur} className="border-b border-slate-50 dark:border-slate-800 last:border-0">
+                            <td className="py-1 font-bold text-brand-blue dark:text-brand-sky bg-sky-50/60 dark:bg-sky-950/30">{row.eur}</td>
+                            <td className="py-1 text-slate-500 dark:text-slate-400">{row.co}</td>
+                            <td className="py-1 text-slate-500 dark:text-slate-400">{row.us}</td>
+                            <td className="py-1 text-slate-500 dark:text-slate-400">{row.cm}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -823,14 +827,14 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               </div>
             )}
 
-            <p className="text-[10px] text-slate-400 mb-3">
-              Elegí siempre la talla en <span className="font-semibold text-brand-blue">EUR</span> (columna
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-3">
+              Elegí siempre la talla en <span className="font-semibold text-brand-blue dark:text-brand-sky">EUR</span> (columna
               destacada) — es la que viene marcada en la caja del proveedor y la misma que ve el cliente en la
               ficha del producto.
             </p>
 
             {fieldErrors.colors && fieldTouched.colors && (
-              <div className="flex items-center gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 mb-3">
+              <div className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl px-3 py-2.5 mb-3">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{fieldErrors.colors}</span>
               </div>
@@ -840,7 +844,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               {colorways
                 .filter((c) => !c.deleted)
                 .map((c) => (
-                  <div key={c.key} className="border border-slate-100 rounded-2xl p-4 space-y-3">
+                  <div key={c.key} className="border border-slate-100 dark:border-slate-700 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-3">
                       <label
                         className="relative w-10 h-10 shrink-0 cursor-pointer group"
@@ -853,9 +857,9 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                         }
                       >
                         {c.image_url ? (
-                          <img src={c.image_url} alt={c.name} className="w-10 h-10 rounded-xl object-cover bg-slate-100" />
+                          <img src={c.image_url} alt={c.name} className="w-10 h-10 rounded-xl object-cover bg-slate-100 dark:bg-slate-800" />
                         ) : (
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                             <Upload className="w-3.5 h-3.5 text-slate-400" />
                           </div>
                         )}
@@ -884,7 +888,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                           )
                         }
                         placeholder="Nombre del color (ej: Azul/Vino)"
-                        className="flex-1 min-w-0 text-sm font-semibold px-3 py-2 bg-slate-50/60 border border-slate-100 rounded-xl outline-none focus:border-brand-blue"
+                        className="flex-1 min-w-0 text-sm font-semibold px-3 py-2 bg-slate-50/60 dark:bg-slate-800/60 dark:text-white border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:border-brand-blue"
                       />
 
                       <button
@@ -892,8 +896,8 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                         onClick={() => handleToggleColorwayAvailable(c.key)}
                         className={`text-[11px] font-bold px-3 py-1.5 rounded-full border transition-colors shrink-0 ${
                           c.available
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                         }`}
                       >
                         {c.available ? 'Disponible' : 'Agotado'}
@@ -902,7 +906,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                       <button
                         type="button"
                         onClick={() => handleRemoveColorway(c.key)}
-                        className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-600 dark:hover:text-rose-400 dark:hover:bg-rose-950/40 transition-colors shrink-0"
                         title="Quitar color"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -911,10 +915,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                           Tallas disponibles (EUR)
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500">
                           Click: agregar → agotada → quitar
                         </p>
                       </div>
@@ -942,8 +946,8 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                                 state === 'available'
                                   ? 'bg-brand-blue text-white border-brand-blue'
                                   : state === 'unavailable'
-                                  ? 'bg-amber-50 text-amber-600 border-amber-200 line-through'
-                                  : 'bg-white text-slate-500 border-slate-200 hover:border-brand-blue hover:text-brand-blue'
+                                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900 line-through'
+                                  : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-brand-blue hover:text-brand-blue'
                               }`}
                             >
                               {size}
@@ -961,8 +965,8 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                               title={s.available ? 'Disponible — click para marcar agotada' : 'Agotada — click para volver a disponible'}
                               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
                                 s.available
-                                  ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/30'
-                                  : 'bg-amber-50 text-amber-600 border-amber-200 line-through'
+                                  ? 'bg-brand-blue/10 dark:bg-brand-sky/10 text-brand-blue dark:text-brand-sky border-brand-blue/30 dark:border-brand-sky/30'
+                                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900 line-through'
                               }`}
                             >
                               {s.size}
@@ -992,12 +996,12 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                             }
                           }}
                           placeholder="Otra talla (fuera de la guía)"
-                          className="text-xs px-3 py-2 bg-slate-50/60 border border-slate-100 rounded-xl flex-1 min-w-0 outline-none focus:border-brand-blue"
+                          className="text-xs px-3 py-2 bg-slate-50/60 dark:bg-slate-800/60 dark:text-white border border-slate-100 dark:border-slate-700 rounded-xl flex-1 min-w-0 outline-none focus:border-brand-blue"
                         />
                         <button
                           type="button"
                           onClick={() => handleAddCustomSize(c.key)}
-                          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-brand-blue hover:text-brand-blue transition-colors shrink-0"
+                          className="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-blue hover:text-brand-blue transition-colors shrink-0"
                         >
                           + Agregar
                         </button>
@@ -1007,8 +1011,8 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 ))}
 
               {/* Agregar nuevo color */}
-              <div className="border border-dashed border-slate-200 rounded-2xl p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <div className="border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
                   Agregar color
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2 items-start">
@@ -1022,10 +1026,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                       }
                     }}
                     placeholder="Nombre del color (ej: Azul/Vino)"
-                    className="flex-1 w-full text-sm px-3 py-2.5 bg-slate-50/60 border border-slate-100 rounded-xl outline-none focus:border-brand-blue"
+                    className="flex-1 w-full text-sm px-3 py-2.5 bg-slate-50/60 dark:bg-slate-800/60 dark:text-white border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:border-brand-blue"
                   />
 
-                  <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors shrink-0">
+                  <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors shrink-0">
                     {uploadingNewColor ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : newColorImage ? (
@@ -1066,7 +1070,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
                 Precio (COP) *
               </label>
               <input
@@ -1076,10 +1080,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 onChange={(e) => setPrice(e.target.value)}
                 onBlur={() => handleFieldBlur('price')}
                 placeholder="180000"
-                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
                   fieldErrors.price && fieldTouched.price
-                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
                 }`}
               />
               {fieldErrors.price && fieldTouched.price && (
@@ -1090,7 +1094,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               )}
             </div>
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
                 Precio anterior
               </label>
               <input
@@ -1100,10 +1104,10 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 onChange={(e) => setOriginalPrice(e.target.value)}
                 onBlur={() => handleFieldBlur('originalPrice')}
                 placeholder="Opcional"
-                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
                   fieldErrors.originalPrice && fieldTouched.originalPrice
-                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
-                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
                 }`}
               />
               {fieldErrors.originalPrice && fieldTouched.originalPrice && (
@@ -1114,7 +1118,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               )}
             </div>
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
                 Rating
               </label>
               <input
@@ -1124,30 +1128,30 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 max="5"
                 value={rating}
                 onChange={(e) => setRating(e.target.value)}
-                className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+                className="w-full text-sm px-4 py-3 bg-slate-50/60 dark:bg-slate-800/60 dark:text-white border border-slate-100 dark:border-slate-700 focus:border-brand-blue outline-none rounded-2xl"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
               <input type="checkbox" checked={isNew} onChange={(e) => setIsNew(e.target.checked)} className="w-4 h-4 accent-brand-blue" />
               Marcar como nuevo
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
               <input type="checkbox" checked={isHot} onChange={(e) => setIsHot(e.target.checked)} className="w-4 h-4 accent-brand-blue" />
               Marcar como destacado
             </label>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
               Estado
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as DbStatus)}
-              className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+              className="w-full text-sm px-4 py-3 bg-slate-50/60 dark:bg-slate-800/60 dark:text-white border border-slate-100 dark:border-slate-700 focus:border-brand-blue outline-none rounded-2xl"
             >
               <option value="disponible">Disponible</option>
               <option value="agotado">Agotado</option>
@@ -1156,7 +1160,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5">
+            <div className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900 rounded-xl px-3 py-2.5">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -1166,16 +1170,29 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 rounded-2xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+              disabled={saved}
+              className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={saving || uploading}
-              className="flex-1 py-3 rounded-2xl bg-brand-blue hover:bg-slate-950 text-white text-sm font-bold transition-colors disabled:opacity-60"
+              disabled={saving || uploading || saved}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold transition-colors disabled:opacity-100 ${
+                saved ? 'bg-emerald-500' : 'bg-brand-blue hover:bg-slate-950 disabled:opacity-60'
+              }`}
             >
-              {saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear producto'}
+              {saved ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" /> ¡Guardado!
+                </>
+              ) : saving ? (
+                'Guardando...'
+              ) : isEditing ? (
+                'Guardar cambios'
+              ) : (
+                'Crear producto'
+              )}
             </button>
           </div>
         </form>
