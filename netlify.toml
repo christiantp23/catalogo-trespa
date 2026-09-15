@@ -23,7 +23,10 @@
 #   autorizado explícitamente. Dominios reales que usa el sitio:
 #     - fonts.googleapis.com / fonts.gstatic.com: tipografía (Google Fonts,
 #       importada en src/index.css)
-#    
+#     - hdxcyvczbhmemjbdkjdh.supabase.co: API, autenticación y Storage de
+#       imágenes de Supabase — usado tanto por la tienda pública como por
+#       el panel admin (mismo cliente en src/lib/supabase.ts, no hay una
+#       API ni CDN aparte para el admin)
 #     - images.unsplash.com: fotos de respaldo de productos (fallback
 #       cuando falta una imagen propia)
 #   Los enlaces a WhatsApp, Telegram, Instagram, Facebook y TikTok del
@@ -31,6 +34,10 @@
 #   nueva (navegación normal del navegador) — el CSP no los restringe
 #   porque no son recursos incrustados (scripts, imágenes, fetch, etc.),
 #   así que no hace falta listarlos en ninguna directiva.
+#
+# ⚠️ TEMPORAL: connect-src está roto a propósito (sin el dominio de
+# Supabase) para confirmar que el test automatizado detecta el problema.
+# Restaurar apenas se confirme que el test falla en rojo.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -38,4 +45,4 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://hdxcyvczbhmemjbdkjdh.supabase.co https://images.unsplash.com; connect-src 'self' https://hdxcyvczbhmemjbdkjdh.supabase.co; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://hdxcyvczbhmemjbdkjdh.supabase.co https://images.unsplash.com; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
