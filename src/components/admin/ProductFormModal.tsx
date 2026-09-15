@@ -1,4 +1,4 @@
-import { useState, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { X, AlertCircle, Upload, Loader2, ImageOff, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
@@ -16,6 +16,7 @@ import {
   logProductChange,
 } from '../../lib/products';
 import { uploadProductImage } from '../../lib/supabase';
+import { validateRequiredText, validatePositivePrice } from '../../lib/validation';
 
 interface ProductFormModalProps {
   product: DbProduct | null; // null = crear nuevo
@@ -23,6 +24,12 @@ interface ProductFormModalProps {
   onClose: () => void;
   onSaved: () => void;
 }
+
+// Campos validados — mismo patrón de errors/touched que CheckoutModal.tsx:
+// el error no se muestra hasta que el usuario toca el campo o intenta
+// guardar. "colors" no es un <input> sino la sección de colores/tallas
+// completa, validada solo al intentar guardar.
+type ProductField = 'name' | 'brand' | 'style' | 'gender' | 'price' | 'originalPrice' | 'colors';
 
 const GENDER_TO_CATEGORY: Record<string, DbCategory> = {
   Dama: 'mujer',
@@ -140,6 +147,85 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ProductField, string>>>({});
+  const [fieldTouched, setFieldTouched] = useState<Partial<Record<ProductField, boolean>>>({});
+
+  const validateProductField = (field: ProductField): string => {
+    switch (field) {
+      case 'name':
+        return validateRequiredText(name, 'El nombre del modelo', 3);
+      case 'brand':
+        return validateRequiredText(brand, 'La marca');
+      case 'style':
+        return validateRequiredText(style, 'La categoría');
+      case 'gender':
+        return validateRequiredText(gender, 'El género');
+      case 'price':
+        return validatePositivePrice(price);
+      case 'originalPrice': {
+        if (!originalPrice.trim()) return '';
+        const orig = Number(originalPrice);
+        if (Number.isNaN(orig)) return 'El precio anterior debe ser un número';
+        if (orig <= 0) return 'El precio anterior debe ser mayor a 0';
+        const curr = Number(price);
+        if (!Number.isNaN(curr) && curr > 0 && orig <= curr) {
+          return 'El precio anterior debe ser mayor al precio actual';
+        }
+        return '';
+      }
+      case 'colors': {
+        const activeColorways = colorways.filter((c) => !c.deleted);
+        if (activeColorways.length === 0) return 'Agregá al menos un color antes de guardar';
+        const hasAnySize = activeColorways.some((c) => c.sizes.some((s) => !s.deleted));
+        if (!hasAnySize) return 'Agregá al menos una talla en algún color antes de guardar';
+        return '';
+      }
+      default:
+        return '';
+    }
+  };
+
+  const handleFieldBlur = (field: ProductField) => {
+    setFieldTouched((prev) => ({ ...prev, [field]: true }));
+    setFieldErrors((prev) => ({ ...prev, [field]: validateProductField(field) }));
+  };
+
+  // Revalida en tiempo real los campos que el usuario ya tocó, cada vez que
+  // cambia alguno de los valores de los que depende la validación. Se hace
+  // en un efecto (en vez de dentro de cada onChange) porque el estado de
+  // React se actualiza en el siguiente render: validar contra "price" o
+  // "name" justo en el mismo onChange que los cambia leería el valor
+  // todavía viejo. También cubre el caso cruzado de "originalPrice", cuyo
+  // error depende de "price".
+  useEffect(() => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      (['name', 'brand', 'style', 'gender', 'price', 'originalPrice'] as ProductField[]).forEach((field) => {
+        if (fieldTouched[field]) {
+          const msg = validateProductField(field);
+          if (next[field] !== msg) {
+            next[field] = msg;
+            changed = true;
+          }
+        }
+      });
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, brand, style, gender, price, originalPrice]);
+
+  // Igual que arriba, pero para la sección de colores/tallas: si el error
+  // "Agregá al menos un color..." ya se mostró (después de un intento de
+  // guardar) y el admin agrega un color o una talla, el aviso desaparece
+  // solo sin necesidad de volver a tocar "Guardar".
+  useEffect(() => {
+    if (!fieldTouched.colors) return;
+    const msg = validateProductField('colors');
+    setFieldErrors((prev) => (prev.colors === msg ? prev : { ...prev, colors: msg }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colorways]);
 
   const sizeGuideForGender =
     SIZE_GUIDE_CHIPS[(gender as 'Caballero' | 'Dama' | 'Unisex') || 'Unisex'] || SIZE_GUIDE_CHIPS.Unisex;
@@ -305,12 +391,28 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     e.preventDefault();
     setError(null);
 
-    if (!name.trim() || !brand.trim() || !price) {
-      setError('Nombre, marca y precio son obligatorios.');
-      return;
-    }
-    if (!style.trim()) {
-      setError('Elegí una categoría o escribí el nombre de la nueva.');
+    // Validamos todos los campos ANTES de intentar guardar, en vez de
+    // dejar que Supabase rechace (o guarde a medias) datos inválidos.
+    const fieldsToValidate: ProductField[] = ['name', 'brand', 'style', 'gender', 'price', 'originalPrice', 'colors'];
+    const newErrors: Partial<Record<ProductField, string>> = {};
+    fieldsToValidate.forEach((field) => {
+      const fieldError = validateProductField(field);
+      if (fieldError) newErrors[field] = fieldError;
+    });
+
+    const newTouched: Partial<Record<ProductField, boolean>> = {};
+    fieldsToValidate.forEach((field) => {
+      newTouched[field] = true;
+    });
+    setFieldTouched(newTouched);
+    setFieldErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorField = fieldsToValidate.find((field) => newErrors[field]);
+      if (firstErrorField) {
+        const inputElement = document.querySelector(`[name="${firstErrorField}"]`) as HTMLInputElement | null;
+        inputElement?.focus();
+      }
       return;
     }
 
@@ -470,11 +572,23 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               Nombre del modelo *
             </label>
             <input
+              name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={() => handleFieldBlur('name')}
               placeholder="Ej: New Balance 9060"
-              className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                fieldErrors.name && fieldTouched.name
+                  ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                  : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+              }`}
             />
+            {fieldErrors.name && fieldTouched.name && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {fieldErrors.name}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -483,25 +597,49 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 Marca *
               </label>
               <input
+                name="brand"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
+                onBlur={() => handleFieldBlur('brand')}
                 placeholder="Nike, Adidas..."
-                className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                  fieldErrors.brand && fieldTouched.brand
+                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                }`}
               />
+              {fieldErrors.brand && fieldTouched.brand && (
+                <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                  {fieldErrors.brand}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
                 Género
               </label>
               <select
+                name="gender"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+                onBlur={() => handleFieldBlur('gender')}
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                  fieldErrors.gender && fieldTouched.gender
+                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                }`}
               >
                 <option value="Dama">Dama</option>
                 <option value="Caballero">Caballero</option>
                 <option value="Unisex">Unisex</option>
               </select>
+              {fieldErrors.gender && fieldTouched.gender && (
+                <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                  {fieldErrors.gender}
+                </p>
+              )}
             </div>
           </div>
 
@@ -510,6 +648,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               Categoría (estilo de la ficha)
             </label>
             <select
+              name={showCustomStyle ? undefined : 'style'}
               value={showCustomStyle ? OTHER_STYLE : style}
               onChange={(e) => {
                 if (e.target.value === OTHER_STYLE) {
@@ -520,7 +659,12 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                   setStyle(e.target.value);
                 }
               }}
-              className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+              onBlur={() => handleFieldBlur('style')}
+              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                fieldErrors.style && fieldTouched.style
+                  ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                  : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+              }`}
             >
               {existingStyles.map((s) => (
                 <option key={s} value={s}>
@@ -532,12 +676,24 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
             {showCustomStyle && (
               <input
+                name="style"
                 value={style}
                 onChange={(e) => setStyle(e.target.value)}
+                onBlur={() => handleFieldBlur('style')}
                 placeholder="Nombre de la nueva categoría (ej: Deportivo)"
                 autoFocus
-                className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl mt-2"
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all mt-2 ${
+                  fieldErrors.style && fieldTouched.style
+                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                }`}
               />
+            )}
+            {fieldErrors.style && fieldTouched.style && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {fieldErrors.style}
+              </p>
             )}
           </div>
 
@@ -661,6 +817,13 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               destacada) — es la que viene marcada en la caja del proveedor y la misma que ve el cliente en la
               ficha del producto.
             </p>
+
+            {fieldErrors.colors && fieldTouched.colors && (
+              <div className="flex items-center gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 mb-3">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{fieldErrors.colors}</span>
+              </div>
+            )}
 
             <div className="space-y-3">
               {colorways
@@ -881,24 +1044,48 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 Precio (COP) *
               </label>
               <input
+                name="price"
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
+                onBlur={() => handleFieldBlur('price')}
                 placeholder="180000"
-                className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                  fieldErrors.price && fieldTouched.price
+                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                }`}
               />
+              {fieldErrors.price && fieldTouched.price && (
+                <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                  {fieldErrors.price}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
                 Precio anterior
               </label>
               <input
+                name="originalPrice"
                 type="number"
                 value={originalPrice}
                 onChange={(e) => setOriginalPrice(e.target.value)}
+                onBlur={() => handleFieldBlur('originalPrice')}
                 placeholder="Opcional"
-                className="w-full text-sm px-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue outline-none rounded-2xl"
+                className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all ${
+                  fieldErrors.originalPrice && fieldTouched.originalPrice
+                    ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                    : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+                }`}
               />
+              {fieldErrors.originalPrice && fieldTouched.originalPrice && (
+                <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                  {fieldErrors.originalPrice}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">

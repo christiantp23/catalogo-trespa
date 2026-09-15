@@ -8,6 +8,12 @@ import {
   deleteTestimonial,
 } from '../../lib/testimonials';
 import { uploadProductImage } from '../../lib/supabase';
+import { validateRequiredText } from '../../lib/validation';
+
+// Campos validados del formulario "Agregar testimonio" — mismo patrón de
+// errors/touched que CheckoutModal.tsx: el error no se muestra hasta que
+// el usuario toca el campo o intenta guardar.
+type NewTestimonialField = 'name' | 'media';
 
 const PHONE_COLORS = [
   { value: 'bg-amber-400', label: 'Amarillo' },
@@ -27,6 +33,24 @@ export default function AdminTestimonials() {
   const [newColor, setNewColor] = useState(PHONE_COLORS[0].value);
   const [newMediaUrl, setNewMediaUrl] = useState('');
   const [newIsVideo, setNewIsVideo] = useState(false);
+
+  const [newErrors, setNewErrors] = useState<Partial<Record<NewTestimonialField, string>>>({});
+  const [newTouched, setNewTouched] = useState<Partial<Record<NewTestimonialField, boolean>>>({});
+
+  const validateNewName = (value: string): string => validateRequiredText(value, 'El nombre del cliente');
+  const validateNewMedia = (mediaUrl: string): string => (mediaUrl ? '' : 'Subí una foto o video antes de guardar');
+
+  const handleNewNameChange = (value: string) => {
+    setNewName(value);
+    if (newTouched.name) {
+      setNewErrors((prev) => ({ ...prev, name: validateNewName(value) }));
+    }
+  };
+
+  const handleNewNameBlur = () => {
+    setNewTouched((prev) => ({ ...prev, name: true }));
+    setNewErrors((prev) => ({ ...prev, name: validateNewName(newName) }));
+  };
 
   const load = async () => {
     setLoading(true);
@@ -52,6 +76,9 @@ export default function AdminTestimonials() {
       const url = await uploadProductImage(file);
       setNewMediaUrl(url);
       setNewIsVideo(file.type.startsWith('video/'));
+      if (newTouched.media) {
+        setNewErrors((prev) => ({ ...prev, media: validateNewMedia(url) }));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo subir el archivo');
     } finally {
@@ -61,10 +88,14 @@ export default function AdminTestimonials() {
   };
 
   const handleAdd = async () => {
-    if (!newName.trim() || !newMediaUrl) {
-      setError('Poné un nombre y subí una captura o video.');
-      return;
-    }
+    // Validamos nombre y medio (foto/video) antes de intentar guardar, en
+    // vez de dejar que se cree un testimonio vacío o a medias.
+    const nameError = validateNewName(newName);
+    const mediaError = validateNewMedia(newMediaUrl);
+    setNewTouched({ name: true, media: true });
+    setNewErrors({ name: nameError, media: mediaError });
+    if (nameError || mediaError) return;
+
     try {
       await createTestimonial({
         client_name: newName.trim(),
@@ -77,6 +108,8 @@ export default function AdminTestimonials() {
       setNewName('');
       setNewMediaUrl('');
       setNewIsVideo(false);
+      setNewErrors({});
+      setNewTouched({});
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el testimonio');
@@ -212,12 +245,26 @@ export default function AdminTestimonials() {
       <div className="border border-dashed border-slate-200 rounded-2xl p-4 bg-white">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Agregar testimonio</p>
         <div className="space-y-3">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Nombre del cliente"
-            className="w-full text-sm px-4 py-2.5 bg-slate-50/60 border border-slate-100 rounded-xl outline-none focus:border-brand-blue"
-          />
+          <div>
+            <input
+              name="name"
+              value={newName}
+              onChange={(e) => handleNewNameChange(e.target.value)}
+              onBlur={handleNewNameBlur}
+              placeholder="Nombre del cliente"
+              className={`w-full text-sm px-4 py-2.5 border outline-none rounded-xl transition-all ${
+                newErrors.name && newTouched.name
+                  ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/10'
+                  : 'border-slate-100 focus:border-brand-blue bg-slate-50/60'
+              }`}
+            />
+            {newErrors.name && newTouched.name && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {newErrors.name}
+              </p>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 shrink-0">Color del mockup:</span>
@@ -234,26 +281,41 @@ export default function AdminTestimonials() {
             ))}
           </div>
 
-          <label className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors">
-            {uploadingId === 'new' ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Subiendo...
-              </>
-            ) : newMediaUrl ? (
-              <>{newIsVideo ? <Video className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />} Archivo listo — tocá para cambiar</>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" /> Subir captura de chat o video
-              </>
+          <div>
+            <label
+              className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed text-sm font-semibold cursor-pointer transition-colors ${
+                newErrors.media && newTouched.media
+                  ? 'border-rose-300 text-rose-500 hover:border-rose-400'
+                  : 'border-slate-200 text-slate-500 hover:border-brand-blue hover:text-brand-blue'
+              }`}
+            >
+              {uploadingId === 'new' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Subiendo...
+                </>
+              ) : newMediaUrl ? (
+                <>{newIsVideo ? <Video className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />} Archivo listo — tocá para cambiar</>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" /> Subir captura de chat o video
+                </>
+              )}
+              <input
+                name="media"
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleNewFileSelected}
+                disabled={uploadingId === 'new'}
+                className="hidden"
+              />
+            </label>
+            {newErrors.media && newTouched.media && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {newErrors.media}
+              </p>
             )}
-            <input
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleNewFileSelected}
-              disabled={uploadingId === 'new'}
-              className="hidden"
-            />
-          </label>
+          </div>
 
           <button
             onClick={handleAdd}

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, CheckoutData } from '../types';
 import { useSiteSettings } from '../lib/settings';
 import { createOrderFromCheckout } from '../lib/orders';
+import { validateColombianMobile } from '../lib/validation';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -58,26 +59,8 @@ export default function CheckoutModal({
         if (!/^\d+$/.test(value.trim())) return 'La cédula debe contener solo números';
         if (value.trim().length < 5) return 'La cédula debe tener al menos 5 dígitos';
         break;
-      case 'phone': {
-        const phoneTrimmed = value.trim();
-        if (!phoneTrimmed) return 'El número de celular es obligatorio';
-        
-        // Regex para validar formato de celular colombiano: inicia con 3 y tiene exactamente 10 dígitos
-        const phoneRegex = /^3\d{9}$/;
-        if (!phoneRegex.test(phoneTrimmed)) {
-          if (!/^\d+$/.test(phoneTrimmed)) {
-            return 'El celular debe contener solo números';
-          }
-          if (!phoneTrimmed.startsWith('3')) {
-            return 'El celular debe iniciar con 3 (Ej: 3012345678)';
-          }
-          if (phoneTrimmed.length !== 10) {
-            return 'El celular debe tener exactamente 10 dígitos';
-          }
-          return 'Por favor ingresa un número de celular colombiano válido de 10 dígitos';
-        }
-        break;
-      }
+      case 'phone':
+        return validateColombianMobile(value);
       case 'city':
         if (!value.trim()) return 'La ciudad es obligatoria';
         if (value.trim().length < 3) return 'Ingresa una ciudad válida';
