@@ -45,10 +45,18 @@ export async function createOrderFromCheckout(
   cartItems: CartItem[],
   data: CheckoutData,
   total: number
-): Promise<DbOrder> {
-  const rows = await sbRest<DbOrder[]>("orders", {
+): Promise<void> {
+  // Generamos el id en el navegador (en vez de dejar que Postgres lo asigne
+  // con gen_random_uuid()) porque la escritura pide "return=minimal": ya no
+  // recibimos la fila insertada de vuelta, así que necesitamos el id de
+  // antemano para poder armar los order_items que dependen de él.
+  const orderId = crypto.randomUUID();
+
+  await sbRest("orders", {
     method: "POST",
+    returnMinimal: true,
     body: {
+      id: orderId,
       customer_name: data.fullName.trim(),
       cedula: data.cedula.trim(),
       phone: data.phone.trim(),
@@ -61,10 +69,9 @@ export async function createOrderFromCheckout(
       notes: data.observaciones?.trim() || null,
     },
   });
-  const order = rows[0];
 
   const items = cartItems.map((item) => ({
-    order_id: order.id,
+    order_id: orderId,
     product_id: item.product.id,
     product_name: item.product.name,
     colorway: item.selectedColor,
@@ -74,10 +81,8 @@ export async function createOrderFromCheckout(
   }));
 
   if (items.length > 0) {
-    await sbRest("order_items", { method: "POST", body: items });
+    await sbRest("order_items", { method: "POST", returnMinimal: true, body: items });
   }
-
-  return order;
 }
 
 // =========================================================================

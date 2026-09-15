@@ -88,11 +88,18 @@ interface RestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   useAuth?: boolean;
+  // Cuando es true, pide "Prefer: return=minimal" en vez de
+  // "return=representation": Supabase guarda pero no intenta leer la fila
+  // de vuelta. Necesario para escrituras públicas (sin sesión) en tablas
+  // cuya política de SELECT exige is_admin() — sin esto, PostgREST intenta
+  // devolver la fila insertada, esa lectura falla con "permission denied"
+  // y cancela toda la operación aunque el INSERT en sí estaba permitido.
+  returnMinimal?: boolean;
 }
 
 export async function sbRest<T = unknown>(
   path: string,
-  { method = "GET", body, useAuth = false }: RestOptions = {},
+  { method = "GET", body, useAuth = false, returnMinimal = false }: RestOptions = {},
   _isRetry = false
 ): Promise<T> {
   const headers: Record<string, string> = {
@@ -100,7 +107,7 @@ export async function sbRest<T = unknown>(
     "Content-Type": "application/json",
     Authorization: `Bearer ${useAuth && currentAccessToken ? currentAccessToken : SUPABASE_ANON_KEY}`,
   };
-  if (method !== "GET") headers["Prefer"] = "return=representation";
+  if (method !== "GET") headers["Prefer"] = returnMinimal ? "return=minimal" : "return=representation";
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     method,
@@ -112,15 +119,18 @@ export async function sbRest<T = unknown>(
   // UNA vez y reintentar la misma operación antes de mostrar error.
   if (!res.ok && useAuth && !_isRetry && (res.status === 401 || res.status === 403)) {
     const refreshed = await refreshSession();
-    if (refreshed) return sbRest<T>(path, { method, body, useAuth }, true);
+    if (refreshed) return sbRest<T>(path, { method, body, useAuth, returnMinimal }, true);
   }
 
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `Error ${res.status}`);
   }
+  // "return=minimal" responde 201/204 con cuerpo vacío (no solo 204) —
+  // parsear como JSON ahí explotaría con "Unexpected end of JSON input".
   if (res.status === 204) return null as T;
-  return res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : (null as T);
 }
 
 export async function sbLogin(email: string, password: string) {
