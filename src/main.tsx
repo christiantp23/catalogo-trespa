@@ -1,4 +1,4 @@
-import {StrictMode} from 'react';
+import {StrictMode, useEffect, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import AdminApp from './AdminApp.tsx';
@@ -9,10 +9,24 @@ import './index.css';
 // (no una ruta /admin) porque GitHub Pages sirve archivos estáticos y no
 // puede resolver rutas profundas sin configuración extra — el hash siempre
 // funciona sin tocar el hosting.
-const isAdminRoute = window.location.hash.startsWith('#admin');
+function Root() {
+  const [isAdminRoute, setIsAdminRoute] = useState(() =>
+    window.location.hash.startsWith('#admin'),
+  );
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setIsAdminRoute(window.location.hash.startsWith('#admin'));
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  return isAdminRoute ? <AdminApp /> : <App />;
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAdminRoute ? <AdminApp /> : <App />}
+    <Root />
   </StrictMode>,
 );

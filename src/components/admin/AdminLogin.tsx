@@ -2,26 +2,51 @@ import { useState, FormEvent } from 'react';
 import { Lock, Mail, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { sbLogin } from '../../lib/supabase';
+import { validateEmail, validateRequiredText } from '../../lib/validation';
 
 interface AdminLoginProps {
   onSuccess: (accessToken: string, refreshToken: string) => void;
 }
 
+// Traduce los errores crudos de la API de Supabase a mensajes claros en
+// español — nunca mostramos el texto en inglés que devuelve la API.
+function translateAuthError(err: unknown): string {
+  const rawMessage = err instanceof Error ? err.message : String(err);
+  const normalized = rawMessage.toLowerCase();
+
+  if (normalized.includes('invalid login credentials') || normalized.includes('invalid_credentials')) {
+    return 'Email o contraseña incorrectos';
+  }
+  if (normalized.includes('failed to fetch') || normalized.includes('network')) {
+    return 'No se pudo conectar, revisa tu conexión';
+  }
+  return 'No se pudo iniciar sesión, intenta de nuevo';
+}
+
 export default function AdminLogin({ onSuccess }: AdminLoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
+
+    const nextEmailError = validateEmail(email);
+    const nextPasswordError = validateRequiredText(password, 'La contraseña');
+    setEmailError(nextEmailError);
+    setPasswordError(nextPasswordError);
+    if (nextEmailError || nextPasswordError) return;
+
     setLoading(true);
     try {
       const { access_token, refresh_token } = await sbLogin(email, password);
       onSuccess(access_token, refresh_token);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión');
+      setFormError(translateAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -40,7 +65,7 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
           <p className="text-xs text-slate-400 mt-1">Acceso solo para el equipo de Trespa Store</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
               Email
@@ -49,13 +74,20 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="email"
-                required
+                autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError('');
+                }}
+                onBlur={() => setEmailError(validateEmail(email))}
                 placeholder="tu@email.com"
-                className="w-full text-sm pl-10 pr-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10 outline-none rounded-2xl transition-all"
+                className={`w-full text-sm pl-10 pr-4 py-3 bg-slate-50/60 border focus:bg-white focus:ring-4 focus:ring-brand-blue/10 outline-none rounded-2xl transition-all ${
+                  emailError ? 'border-rose-500' : 'border-slate-100 focus:border-brand-blue'
+                }`}
               />
             </div>
+            {emailError && <p className="text-xs text-rose-600 mt-1.5 ml-1">{emailError}</p>}
           </div>
 
           <div>
@@ -66,19 +98,26 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="password"
-                required
+                autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError('');
+                }}
+                onBlur={() => setPasswordError(validateRequiredText(password, 'La contraseña'))}
                 placeholder="••••••••"
-                className="w-full text-sm pl-10 pr-4 py-3 bg-slate-50/60 border border-slate-100 focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10 outline-none rounded-2xl transition-all"
+                className={`w-full text-sm pl-10 pr-4 py-3 bg-slate-50/60 border focus:bg-white focus:ring-4 focus:ring-brand-blue/10 outline-none rounded-2xl transition-all ${
+                  passwordError ? 'border-rose-500' : 'border-slate-100 focus:border-brand-blue'
+                }`}
               />
             </div>
+            {passwordError && <p className="text-xs text-rose-600 mt-1.5 ml-1">{passwordError}</p>}
           </div>
 
-          {error && (
+          {formError && (
             <div className="flex items-center gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <span>{formError}</span>
             </div>
           )}
 

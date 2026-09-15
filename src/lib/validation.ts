@@ -55,6 +55,14 @@ export function validateRequiredText(value: string, fieldLabel: string, minLengt
   return '';
 }
 
+// Email básico: obligatorio y con formato usuario@dominio.
+export function validateEmail(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return 'El email es obligatorio';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'Ingresa un email válido';
+  return '';
+}
+
 // Precio: obligatorio y mayor a 0.
 export function validatePositivePrice(value: string, fieldLabel = 'El precio'): string {
   const trimmed = value.trim();
