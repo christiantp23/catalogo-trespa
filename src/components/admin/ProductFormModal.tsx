@@ -15,7 +15,12 @@ import {
   deleteSize,
   logProductChange,
 } from '../../lib/products';
-import { uploadProductImage } from '../../lib/supabase';
+import { uploadProductImage, UploadPhase } from '../../lib/supabase';
+
+const PHASE_LABEL: Record<UploadPhase, string> = {
+  optimizing: 'Optimizando imagen...',
+  uploading: 'Subiendo...',
+};
 import { validateRequiredText, validatePositivePrice } from '../../lib/validation';
 
 interface ProductFormModalProps {
@@ -130,6 +135,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   const [description, setDescription] = useState(product?.description || '');
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [price, setPrice] = useState(product?.price?.toString() || '');
   const [originalPrice, setOriginalPrice] = useState(product?.original_price?.toString() || '');
   const [rating, setRating] = useState(product?.rating?.toString() || '4.8');
@@ -141,7 +147,9 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   const [newColorName, setNewColorName] = useState('');
   const [newColorImage, setNewColorImage] = useState('');
   const [uploadingNewColor, setUploadingNewColor] = useState(false);
+  const [newColorUploadPhase, setNewColorUploadPhase] = useState<UploadPhase | null>(null);
   const [uploadingColorKey, setUploadingColorKey] = useState<string | null>(null);
+  const [colorUploadPhase, setColorUploadPhase] = useState<UploadPhase | null>(null);
   const [customSizeByColor, setCustomSizeByColor] = useState<Record<string, string>>({});
   const [showSizeGuide, setShowSizeGuide] = useState(false);
 
@@ -239,7 +247,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     try {
       const uploaded: string[] = [];
       for (const file of files) {
-        const url = await uploadProductImage(file);
+        const url = await uploadProductImage(file, setUploadPhase);
         uploaded.push(url);
       }
       setImages((prev) => [...prev, ...uploaded]);
@@ -247,6 +255,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       setError(err instanceof Error ? err.message : 'No se pudo subir una de las fotos');
     } finally {
       setUploading(false);
+      setUploadPhase(null);
       e.target.value = '';
     }
   };
@@ -262,12 +271,13 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     setError(null);
     setUploadingNewColor(true);
     try {
-      const url = await uploadProductImage(file);
+      const url = await uploadProductImage(file, setNewColorUploadPhase);
       setNewColorImage(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo subir la foto');
     } finally {
       setUploadingNewColor(false);
+      setNewColorUploadPhase(null);
       e.target.value = '';
     }
   };
@@ -295,12 +305,13 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     setError(null);
     setUploadingColorKey(colorKey);
     try {
-      const url = await uploadProductImage(file);
+      const url = await uploadProductImage(file, setColorUploadPhase);
       setColorways((prev) => prev.map((c) => (c.key === colorKey ? { ...c, image_url: url } : c)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo subir la foto');
     } finally {
       setUploadingColorKey(null);
+      setColorUploadPhase(null);
       e.target.value = '';
     }
   };
@@ -740,7 +751,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
             <label className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold cursor-pointer hover:border-brand-blue hover:text-brand-blue transition-colors">
               {uploading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Subiendo...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...'}
                 </>
               ) : (
                 <>
@@ -831,7 +842,16 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                 .map((c) => (
                   <div key={c.key} className="border border-slate-100 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-3">
-                      <label className="relative w-10 h-10 shrink-0 cursor-pointer group">
+                      <label
+                        className="relative w-10 h-10 shrink-0 cursor-pointer group"
+                        title={
+                          uploadingColorKey === c.key
+                            ? colorUploadPhase
+                              ? PHASE_LABEL[colorUploadPhase]
+                              : 'Subiendo...'
+                            : undefined
+                        }
+                      >
                         {c.image_url ? (
                           <img src={c.image_url} alt={c.name} className="w-10 h-10 rounded-xl object-cover bg-slate-100" />
                         ) : (
@@ -1013,7 +1033,13 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                     ) : (
                       <Upload className="w-3.5 h-3.5" />
                     )}
-                    {newColorImage ? 'Cambiar foto' : 'Elegir foto'}
+                    {uploadingNewColor
+                      ? newColorUploadPhase
+                        ? PHASE_LABEL[newColorUploadPhase]
+                        : 'Subiendo...'
+                      : newColorImage
+                      ? 'Cambiar foto'
+                      : 'Elegir foto'}
                     <input
                       type="file"
                       accept="image/*"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ShoppingBag, Search, Sparkles, Heart } from 'lucide-react';
+import { ShoppingBag, Search, Sparkles, Heart, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 
@@ -150,7 +150,7 @@ export default function Navbar({
                 onClick={() => onOpenInfo('politicas')}
                 className="hover:text-brand-blue hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5 text-slate-800 font-extrabold bg-slate-50 hover:bg-slate-100/80 px-4 py-2 rounded-xl border border-slate-100"
               >
-                👥 Nosotros
+                <Info className="w-3.5 h-3.5" /> Nosotros
               </button>
             </div>
           )}
@@ -178,7 +178,7 @@ export default function Navbar({
                 onClick={() => onOpenInfo('politicas')}
                 className="lg:hidden px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-700 transition-all flex items-center gap-1 cursor-pointer"
               >
-                👥 Nosotros
+                <Info className="w-3.5 h-3.5" /> Nosotros
               </button>
             )}
 

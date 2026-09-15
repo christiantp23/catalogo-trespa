@@ -265,8 +265,8 @@ export default function TestimonialsSection() {
 
                 {/* Encabezado Principal */}
                 <div className="text-center max-w-3xl mx-auto mb-12">
-                    <span className="text-brand-blue font-mono text-xs font-black tracking-widest uppercase bg-blue-50 py-2 px-5 rounded-full border border-blue-100 shadow-xs">
-                        📸 Evidencia Real y Transparente
+                    <span className="text-brand-blue font-mono text-xs font-black tracking-widest uppercase bg-blue-50 py-2 px-5 rounded-full border border-blue-100 shadow-xs inline-flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5" /> Evidencia Real y Transparente
                     </span>
                     <h2 className="font-display font-black text-3xl sm:text-5xl text-slate-900 uppercase tracking-tight mt-5">
                         ESTILO EN CADA PASO

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, CreditCard, Ruler, Check, Info, Truck, Landmark } from 'lucide-react';
+import { X, ShieldCheck, CreditCard, Ruler, Check, Info, Truck, Landmark, ScrollText, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface InfoModalProps {
@@ -132,46 +132,46 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                 <button
                   type="button"
                   onClick={() => setActiveTab('tallas')}
-                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === 'tallas'
                       ? 'border-brand-blue text-brand-blue bg-white font-extrabold'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  👟 Tallas
+                  <Ruler className="w-3.5 h-3.5" /> Tallas
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('politicas')}
-                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === 'politicas'
                       ? 'border-brand-blue text-brand-blue bg-white font-extrabold'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  📜 Políticas
+                  <ScrollText className="w-3.5 h-3.5" /> Políticas
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('pagos')}
-                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === 'pagos'
                       ? 'border-brand-blue text-brand-blue bg-white font-extrabold'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  💵 Medios de Pago
+                  <Wallet className="w-3.5 h-3.5" /> Medios de Pago
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('transportes')}
-                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[110px] py-3.5 px-4 text-[10px] font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === 'transportes'
                       ? 'border-brand-blue text-brand-blue bg-white font-extrabold'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  🚚 Envíos / Transportes
+                  <Truck className="w-3.5 h-3.5" /> Envíos / Transportes
                 </button>
               </div>
 

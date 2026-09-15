@@ -7,8 +7,13 @@ import {
   updateTestimonial,
   deleteTestimonial,
 } from '../../lib/testimonials';
-import { uploadProductImage } from '../../lib/supabase';
+import { uploadProductImage, UploadPhase } from '../../lib/supabase';
 import { validateRequiredText } from '../../lib/validation';
+
+const PHASE_LABEL: Record<UploadPhase, string> = {
+  optimizing: 'Optimizando imagen...',
+  uploading: 'Subiendo...',
+};
 
 // Campos validados del formulario "Agregar testimonio" — mismo patrón de
 // errors/touched que CheckoutModal.tsx: el error no se muestra hasta que
@@ -27,6 +32,7 @@ export default function AdminTestimonials() {
   const [testimonials, setTestimonials] = useState<DbTestimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState<string | 'new' | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [newName, setNewName] = useState('');
@@ -73,7 +79,7 @@ export default function AdminTestimonials() {
     setUploadingId('new');
     setError(null);
     try {
-      const url = await uploadProductImage(file);
+      const url = await uploadProductImage(file, setUploadPhase);
       setNewMediaUrl(url);
       setNewIsVideo(file.type.startsWith('video/'));
       if (newTouched.media) {
@@ -83,6 +89,7 @@ export default function AdminTestimonials() {
       setError(err instanceof Error ? err.message : 'No se pudo subir el archivo');
     } finally {
       setUploadingId(null);
+      setUploadPhase(null);
       e.target.value = '';
     }
   };
@@ -122,7 +129,7 @@ export default function AdminTestimonials() {
     setUploadingId(t.id);
     setError(null);
     try {
-      const url = await uploadProductImage(file);
+      const url = await uploadProductImage(file, setUploadPhase);
       const isVideo = file.type.startsWith('video/');
       await updateTestimonial(t.id, {
         chat_screenshot: isVideo ? null : url,
@@ -134,6 +141,7 @@ export default function AdminTestimonials() {
       setError(err instanceof Error ? err.message : 'No se pudo subir el archivo');
     } finally {
       setUploadingId(null);
+      setUploadPhase(null);
       e.target.value = '';
     }
   };
@@ -196,7 +204,10 @@ export default function AdminTestimonials() {
               </button>
             </div>
 
-            <label className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-slate-100 cursor-pointer group">
+            <label
+              className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-slate-100 cursor-pointer group"
+              title={uploadingId === t.id ? (uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...') : undefined}
+            >
               {t.is_video ? (
                 <div className="w-full h-full flex items-center justify-center text-slate-400">
                   <Video className="w-4 h-4" />
@@ -291,7 +302,7 @@ export default function AdminTestimonials() {
             >
               {uploadingId === 'new' ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Subiendo...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...'}
                 </>
               ) : newMediaUrl ? (
                 <>{newIsVideo ? <Video className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />} Archivo listo — tocá para cambiar</>

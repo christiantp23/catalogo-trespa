@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Phone, MapPin, CreditCard, Sparkles, CheckCircle, Building, FileText, MessageSquare, Mail, ClipboardList, MessageCircle, Truck } from 'lucide-react';
+import { X, User, Phone, MapPin, CreditCard, Sparkles, CheckCircle, CheckCircle2, Landmark, Building, FileText, MessageSquare, Mail, ClipboardList, MessageCircle, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, CheckoutData } from '../types';
 import { useSiteSettings } from '../lib/settings';
@@ -448,7 +448,7 @@ export default function CheckoutModal({
                         ) : formData.phone.length === 10 && !errors.phone ? (
                           <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1.5 animate-fadeIn">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                            <span>✓ Formato de WhatsApp válido para recibir tu pedido</span>
+                            <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Formato de WhatsApp válido para recibir tu pedido</span>
                           </p>
                         ) : formData.phone.length > 0 ? (
                           <p className="text-[11px] text-amber-600 font-medium mt-1 flex items-center gap-1.5">
@@ -550,7 +550,7 @@ export default function CheckoutModal({
                             }`}
                         >
                           <span className="text-xs font-bold font-display flex items-center gap-1.5">
-                            💳 Pago con Tarjeta (Bold)
+                            <CreditCard className="w-3.5 h-3.5" /> Pago con Tarjeta (Bold)
                           </span>
                           <span className="text-[10px] text-slate-500 leading-tight">
                             Paga de forma 100% segura con tu tarjeta débito/crédito vía link de Bold.
@@ -565,7 +565,7 @@ export default function CheckoutModal({
                             }`}
                         >
                           <span className="text-xs font-bold font-display flex items-center gap-1.5">
-                            🏦 Transferencia Directa
+                            <Landmark className="w-3.5 h-3.5" /> Transferencia Directa
                           </span>
                           <span className="text-[10px] text-slate-500 leading-tight">
                             Bancolombia, Nequi, Nu o Lulo. Envías el comprobante.

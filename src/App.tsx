@@ -1,5 +1,31 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Truck, TrendingUp, Filter, Heart, ArrowUpRight, CheckCircle, Percent, ChevronDown, Instagram, Facebook, BookImage, DollarSign, X } from 'lucide-react';
+import {
+  Truck,
+  TrendingUp,
+  Filter,
+  Heart,
+  ArrowUpRight,
+  CheckCircle,
+  Percent,
+  ChevronDown,
+  Instagram,
+  Facebook,
+  BookImage,
+  DollarSign,
+  X,
+  Tag,
+  Flame,
+  Users,
+  Venus,
+  Mars,
+  VenusAndMars,
+  Send,
+  MessageCircle,
+  Ruler,
+  ShieldCheck,
+  CreditCard,
+  Clock,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, CartItem, ToastNotification} from './types';
 import { fetchProducts } from './lib/products';
@@ -116,15 +142,15 @@ function FilterPanelBody({
       {/* Columna 3: Colección por Género */}
       <div className="space-y-3">
         <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
-          <span className="text-xs">👥</span>
+          <Users className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Colección</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {[
-            { id: 'Todos', label: 'Todos', emoji: '👥', activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
-            { id: 'Dama', label: 'Dama', emoji: '🌸', activeClass: 'bg-pink-500 border-pink-500 text-white font-bold shadow-xs' },
-            { id: 'Caballero', label: 'Caballero', emoji: '⚡', activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
-            { id: 'Unisex', label: 'Unisex', emoji: '👥', activeClass: 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-xs' },
+            { id: 'Todos', label: 'Todos', Icon: Users, activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
+            { id: 'Dama', label: 'Dama', Icon: Venus, activeClass: 'bg-pink-500 border-pink-500 text-white font-bold shadow-xs' },
+            { id: 'Caballero', label: 'Caballero', Icon: Mars, activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
+            { id: 'Unisex', label: 'Unisex', Icon: VenusAndMars, activeClass: 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-xs' },
           ].map((item) => (
             <button
               key={item.id}
@@ -136,7 +162,7 @@ function FilterPanelBody({
                   : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>{item.emoji}</span>
+              <item.Icon className="w-3.5 h-3.5 shrink-0" />
               <span>{item.label}</span>
             </button>
           ))}
@@ -159,7 +185,7 @@ function FilterPanelBody({
                 : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
             }`}
           >
-            🏷️ Todos los productos
+            Todos los productos
           </button>
           <button
             type="button"
@@ -170,7 +196,7 @@ function FilterPanelBody({
                 : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
             }`}
           >
-            🔥 En Oferta / Descuento
+            <Flame className="w-3.5 h-3.5 shrink-0" /> En Oferta / Descuento
           </button>
         </div>
       </div>
@@ -763,7 +789,7 @@ export default function App() {
                       <span className="text-[10px] font-bold text-brand-sky uppercase tracking-widest">EL CODIGO TRESPA</span>
                       <p className="font-display font-bold text-sm text-white">Encuentra tu par ideal</p>
                     </div>
-                    <span className="text-xs font-bold text-white bg-brand-blue px-2.5 py-1 rounded-lg">🔥</span>
+                    <span className="text-xs font-bold text-white bg-brand-blue px-2.5 py-1 rounded-lg flex items-center"><Flame className="w-3.5 h-3.5" /></span>
                   </div>
                 </div>
               </motion.div>
@@ -815,7 +841,7 @@ export default function App() {
                 Catálogo Exclusivo Completo
               </div>
               <h3 className="font-display text-lg sm:text-xl font-black tracking-tight text-white uppercase">
-                ¿Buscas más modelos o una referencia específica? 👟✨
+                ¿Buscas más modelos o una referencia específica?
               </h3>
               <p className="text-slate-300 text-xs leading-relaxed font-normal">
                 En esta web exhibimos solo una selección de nuestros modelos más destacados. Contamos con cientos de referencias adicionales esperando por ti. ¡Explora todos los estilos en nuestro canal de Telegram o escríbenos a WhatsApp para consultar por ese par que tanto quieres!
@@ -829,14 +855,14 @@ export default function App() {
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto text-center px-5 py-2.5 bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-extrabold rounded-xl shadow-md shadow-[#229ED9]/20 transition-all text-[11px] tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>✈️</span> Ver Catálogo en Telegram
+                <Send className="w-3.5 h-3.5" /> Ver Catálogo en Telegram
               </a>
               <a
                 href="https://wa.me/573008165725?text=Hola,%20quiero%20ver%20el%20cat%C3%A1logo%20completo%20de%20tenis"
                 target="_blank"
                 rel="noopener noreferrer"
 className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 font-extrabold rounded-xl transition-all text-[11px] tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer shadow-xs"              >
-                <span>💬</span> WhatsApp Directo
+                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp Directo
               </a>
             </div>
           </div>
@@ -1197,19 +1223,19 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
                 {/* Íconos alineados uniformemente */}
                 <li className="pt-2 border-t border-slate-900/60">
                   <button type="button" onClick={() => openInfoModal('tallas')} className="text-brand-sky hover:text-white transition-colors cursor-pointer flex items-center gap-2">
-                    <span className="w-4 text-center text-sm">📏</span>
+                    <Ruler className="w-4 h-4" />
                     <span>Guía de Tallas</span>
                   </button>
                 </li>
                 <li>
                   <button type="button" onClick={() => openInfoModal('politicas')} className="text-brand-sky hover:text-white transition-colors cursor-pointer flex items-center gap-2">
-                    <span className="w-4 text-center text-sm">🛡️</span>
+                    <ShieldCheck className="w-4 h-4" />
                     <span>Políticas 2026</span>
                   </button>
                 </li>
                 <li>
                   <button type="button" onClick={() => openInfoModal('pagos')} className="text-brand-sky hover:text-white transition-colors cursor-pointer flex items-center gap-2">
-                    <span className="w-4 text-center text-sm">💳</span>
+                    <CreditCard className="w-4 h-4" />
                     <span>Medios de Pago</span>
                   </button>
                 </li>
@@ -1225,7 +1251,7 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
                   <a href="tel:+573008165725" className="text-white hover:underline font-semibold">+57 300 816 5725</a>
                 </p>
                 <div className="pt-2 border-t border-slate-900/60 space-y-1">
-                  <p className="text-slate-300 font-medium text-[11px] uppercase tracking-wider">🕒 Horario de atención:</p>
+                  <p className="text-slate-300 font-medium text-[11px] uppercase tracking-wider flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Horario de atención:</p>
                   <p>Lunes a Viernes: <span className="text-white font-medium">10:00 AM a 6:00 PM</span></p>
                   <p>Sábados: <span className="text-white font-medium">9:00 AM a 2:00 PM</span></p>
                   <p className="text-rose-400 font-medium text-[11px] pt-0.5">Domingos y Festivos: No hay servicio</p>

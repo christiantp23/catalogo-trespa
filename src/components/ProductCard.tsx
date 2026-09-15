@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Star, ShoppingBag, Check, ZoomIn, X, ChevronLeft, ChevronRight, Heart, Share2, Lock } from 'lucide-react';
+import { Star, ShoppingBag, Check, ZoomIn, X, ChevronLeft, ChevronRight, Heart, Share2, Lock, Venus, Mars, VenusAndMars, Flame, Ruler } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 
@@ -258,7 +258,7 @@ export default function ProductCard({
       <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-1.5 pointer-events-none">
         {product.isOutOfStock && (
           <span className="px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white bg-rose-700/90 backdrop-blur-xs rounded-[9px] shadow-xs">
-            Agotado 🚫
+            Agotado
           </span>
         )}
         {product.gender && (
@@ -269,7 +269,13 @@ export default function ProductCard({
               ? 'bg-slate-900/90 text-slate-200 border border-slate-700/10'
               : 'bg-blue-950/90 text-blue-200 border border-blue-500/10'
           }`}>
-            {product.gender === 'Dama' ? '🌸 Dama' : product.gender === 'Caballero' ? '⚡ Caballero' : '👥 Unisex'}
+            {product.gender === 'Dama' ? (
+              <><Venus className="w-2.5 h-2.5" /> Dama</>
+            ) : product.gender === 'Caballero' ? (
+              <><Mars className="w-2.5 h-2.5" /> Caballero</>
+            ) : (
+              <><VenusAndMars className="w-2.5 h-2.5" /> Unisex</>
+            )}
           </span>
         )}
         {product.isNew && (
@@ -290,7 +296,7 @@ export default function ProductCard({
           product.originalPrice && discountPercentage > 0 && (
 
           <span className="px-2.5 py-0.5 text-[11px] font-black text-white bg-gradient-to-r from-red-600/95 to-orange-500/95 backdrop-blur-xs rounded-[9px] shadow-md shadow-red-500/30 border border-red-500/20 flex items-center gap-1">
-            <span>🔥 -{discountPercentage}%</span>
+            <span className="flex items-center gap-0.5"><Flame className="w-3 h-3" /> -{discountPercentage}%</span>
             <span className="text-[8px] font-bold text-white/90 tracking-wider uppercase ml-1">OFERTA</span>
           </span>
         )
@@ -552,9 +558,9 @@ export default function ProductCard({
                       <button
                         type="button"
                         onClick={onOpenSizeGuide}
-                        className="text-[10px] text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer"
+                        className="text-[10px] text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer inline-flex items-center gap-1"
                       >
-                        📏 Guía de Tallas
+                        <Ruler className="w-3 h-3" /> Guía de Tallas
                       </button>
                     )}
                   </div>
@@ -801,7 +807,14 @@ export default function ProductCard({
                     product.gender === 'Caballero' ? 'bg-slate-800' :
                     'bg-indigo-600'
                   }`}>
-                    {product.gender} {product.gender === 'Dama' ? '🌸' : product.gender === 'Caballero' ? '⚡' : '👥'}
+                    {product.gender}{' '}
+                    {product.gender === 'Dama' ? (
+                      <Venus className="w-3.5 h-3.5" />
+                    ) : product.gender === 'Caballero' ? (
+                      <Mars className="w-3.5 h-3.5" />
+                    ) : (
+                      <VenusAndMars className="w-3.5 h-3.5" />
+                    )}
                   </span>
                 )}
               </div>
@@ -831,8 +844,8 @@ export default function ProductCard({
                           ${(product.price + 15000).toLocaleString('es-CO')} COP
                         </span>
                       </div>
-                      <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-md mt-1 animate-pulse">
-                        🔥 ¡-8% DTO Ahorras $ 15.000 COP!
+                      <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-md mt-1 animate-pulse inline-flex items-center gap-1">
+                        <Flame className="w-3 h-3" /> ¡-8% DTO Ahorras $ 15.000 COP!
                       </span>
                     </>
                   ) : (
@@ -848,8 +861,8 @@ export default function ProductCard({
                     )}
                   </div>
                   {product.originalPrice && discountPercentage > 0 && (
-                    <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-md mt-1 animate-pulse">
-                      🔥 ¡Ahorras ${(product.originalPrice - product.price).toLocaleString('es-CO')} COP ({discountPercentage}% Dto)!
+                    <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-md mt-1 animate-pulse inline-flex items-center gap-1">
+                      <Flame className="w-3 h-3" /> ¡Ahorras ${(product.originalPrice - product.price).toLocaleString('es-CO')} COP ({discountPercentage}% Dto)!
                     </span>
                     )}
                     </>

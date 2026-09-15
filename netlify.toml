@@ -1,0 +1,44 @@
+# =========================================================================
+# HEADERS DE SEGURIDAD HTTP — Trespa Store
+# =========================================================================
+# Netlify aplica estos headers a cada respuesta cuando SIRVE el sitio (en
+# producción o en un "deploy preview"). NO tienen efecto corriendo
+# `npm run dev` en local: el servidor de desarrollo de Vite no lee este
+# archivo, así que estos headers solo se pueden verificar una vez
+# desplegado en Netlify.
+#
+# - X-Frame-Options "DENY": evita que alguien meta el sitio dentro de un
+#   <iframe> en otra página ajena (protección contra "clickjacking").
+# - X-Content-Type-Options "nosniff": evita que el navegador intente
+#   "adivinar" el tipo de un archivo de forma insegura (MIME sniffing).
+# - Referrer-Policy: al navegar desde este sitio hacia otro, no se revela
+#   la URL completa de origen (solo el dominio, no la ruta con posibles
+#   datos sensibles en la query string).
+# - Permissions-Policy: el sitio no necesita cámara, micrófono ni
+#   geolocalización — se bloquean explícitamente por las dudas, aunque
+#   nunca se pidan.
+# - Content-Security-Policy (el más importante): define de qué dominios
+#   exactos se puede cargar cada tipo de recurso (scripts, estilos,
+#   fuentes, imágenes, llamadas a APIs), bloqueando cualquier origen no
+#   autorizado explícitamente. Dominios reales que usa el sitio:
+#     - fonts.googleapis.com / fonts.gstatic.com: tipografía (Google Fonts,
+#       importada en src/index.css)
+#     - hdxcyvczbhmemjbdkjdh.supabase.co: API, autenticación y Storage de
+#       imágenes de Supabase — usado tanto por la tienda pública como por
+#       el panel admin (mismo cliente en src/lib/supabase.ts, no hay una
+#       API ni CDN aparte para el admin)
+#     - images.unsplash.com: fotos de respaldo de productos (fallback
+#       cuando falta una imagen propia)
+#   Los enlaces a WhatsApp, Telegram, Instagram, Facebook y TikTok del
+#   sitio son simples <a href> que abren esas páginas en una pestaña
+#   nueva (navegación normal del navegador) — el CSP no los restringe
+#   porque no son recursos incrustados (scripts, imágenes, fetch, etc.),
+#   así que no hace falta listarlos en ninguna directiva.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://hdxcyvczbhmemjbdkjdh.supabase.co https://images.unsplash.com; connect-src 'self' https://hdxcyvczbhmemjbdkjdh.supabase.co; frame-ancestors 'none';"

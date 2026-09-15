@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { MessageCircle } from 'lucide-react';
 import { useSiteSettings } from '../lib/settings';
 
 export default function FloatingWhatsapp() {
@@ -25,9 +26,9 @@ export default function FloatingWhatsapp() {
             initial={{ opacity: 0, x: 10, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 10, scale: 0.95 }}
-            className="hidden sm:block bg-slate-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-lg font-medium whitespace-nowrap"
+            className="hidden sm:flex items-center gap-1.5 bg-slate-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-lg font-medium whitespace-nowrap"
           >
-            💬 ¿Necesitas ayuda? Chatea con nosotros
+            <MessageCircle className="w-3.5 h-3.5" /> ¿Necesitas ayuda? Chatea con nosotros
           </motion.div>
         )}
       </AnimatePresence>

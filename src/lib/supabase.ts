@@ -6,6 +6,8 @@
 // autenticación (GoTrue) de Supabase usando fetch, igual que hace cualquier
 // llamada a una API externa.
 
+import { optimizeImage } from "./imageOptimizer";
+
 export const SUPABASE_URL = "https://hdxcyvczbhmemjbdkjdh.supabase.co";
 // La "anon key" es segura de exponer en el frontend: la seguridad real la
 // da la Row Level Security (RLS) configurada en las tablas, no esta llave.
@@ -140,11 +142,11 @@ export async function sbLogin(email: string, password: string) {
 // Sube un archivo (foto sacada de celular, tablet o PC) y devuelve la URL
 // pública ya lista para guardar en la base de datos. No requiere pasar por
 // ningún servicio externo: el archivo va directo del navegador a Supabase.
-export async function uploadProductImage(file: File, _isRetry = false): Promise<string> {
+async function uploadFileToStorage(file: File, _isRetry = false): Promise<string> {
   const safeName = file.name
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // saca tildes
+    .replace(/[̀-ͯ]/g, "") // saca tildes
     .replace(/[^a-z0-9.]+/g, "-");
   const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
 
@@ -164,7 +166,7 @@ export async function uploadProductImage(file: File, _isRetry = false): Promise<
   // Mismo mecanismo de renovación automática de sesión que sbRest.
   if (!res.ok && !_isRetry && (res.status === 401 || res.status === 403)) {
     const refreshed = await refreshSession();
-    if (refreshed) return uploadProductImage(file, true);
+    if (refreshed) return uploadFileToStorage(file, true);
   }
 
   if (!res.ok) {
@@ -173,4 +175,24 @@ export async function uploadProductImage(file: File, _isRetry = false): Promise<
   }
 
   return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
+}
+
+export type UploadPhase = "optimizing" | "uploading";
+
+// Punto de entrada usado por todo el panel admin (fotos de producto,
+// colorways, testimonios). Antes de subir, pasa el archivo por el
+// optimizador (resize + conversión a WebP, ver lib/imageOptimizer.ts); si
+// es un video (Testimonios acepta image/*,video/*) o la optimización falla
+// por cualquier motivo, sigue con el archivo original en vez de bloquear
+// la subida. onPhaseChange es opcional y permite que la UI muestre
+// "Optimizando imagen..." mientras corre el canvas, y "Subiendo..."
+// mientras el archivo viaja a Supabase.
+export async function uploadProductImage(
+  file: File,
+  onPhaseChange?: (phase: UploadPhase) => void
+): Promise<string> {
+  onPhaseChange?.("optimizing");
+  const optimizedFile = await optimizeImage(file);
+  onPhaseChange?.("uploading");
+  return uploadFileToStorage(optimizedFile);
 }

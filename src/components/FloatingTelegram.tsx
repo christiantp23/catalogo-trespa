@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Send } from 'lucide-react';
 
 // =========================================================================
 // 5. BOTÓN FLOTANTE DEL CATÁLOGO DE TELEGRAM (FloatingTelegram)
@@ -33,9 +34,9 @@ export default function FloatingTelegram() {
                         initial={{ opacity: 0, x: 10, scale: 0.95 }} // Estado inicial (invisible y un poco a la derecha)
                         animate={{ opacity: 1, x: 0, scale: 1 }}     // Estado visible (opacidad completa en su posición)
                         exit={{ opacity: 0, x: 10, scale: 0.95 }}      // Estado al desaparecer
-                        className="hidden sm:block bg-slate-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-lg font-medium whitespace-nowrap"
+                        className="hidden sm:flex items-center gap-1.5 bg-slate-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-lg font-medium whitespace-nowrap"
                     >
-                        ✈️ ¡Únete a nuestro canal de Telegram!
+                        <Send className="w-3.5 h-3.5" /> ¡Únete a nuestro canal de Telegram!
                     </motion.div>
                 )}
             </AnimatePresence>
