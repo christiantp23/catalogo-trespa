@@ -12,6 +12,7 @@ import {
   Facebook,
   BookImage,
   DollarSign,
+  ArrowRight,
   X,
   Tag,
   Flame,
@@ -728,14 +729,38 @@ export default function App() {
 
  {/* Sección del Banner Principal (Hero) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10">
-        <div className="relative bg-slate-950 rounded-[40px] p-8 sm:p-10 md:p-12 overflow-hidden shadow-2xl">
-          {/* Anillos gráficos de ambientación */}
-          <div className="absolute -right-24 -bottom-24 w-96 h-96 bg-brand-blue/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute left-1/3 -top-12 w-72 h-72 bg-brand-sky/10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Detalles del llamado a la acción */}
-            <div className="lg:col-span-7 space-y-5 text-center lg:text-left py-2">
+        <div className="relative rounded-[40px] overflow-hidden shadow-2xl min-h-[420px] sm:min-h-[460px] md:min-h-[520px]">
+          {/* Foto de fondo: dos modelos con hoodies y sneakers Trespa Store.
+              object-position se ajusta por breakpoint porque el recorte que
+              hace "cover" es muy distinto en mobile (imagen casi cuadrada,
+              corta mucho a los costados -> center) que en desktop (imagen
+              bastante más ancha que el contenedor, corta arriba/abajo ->
+              subimos el foco al 25% para priorizar caras y logo del hoodie
+              por sobre los tenis). Va PRIMERA en el DOM (detrás, sin
+              z-index) para que el degradado y el texto pinten encima. */}
+          <img
+            src="/hero.webp"
+            alt="Modelos usando hoodies y sneakers Trespa Store"
+            className="absolute inset-0 w-full h-full object-cover object-center md:object-[center_25%]"
+          />
+
+          {/* Degradado oscuro para legibilidad del texto: más cerrado a la
+              izquierda (donde va el texto) y transparente hacia la derecha
+              (donde están los modelos). En mobile el texto ocupa casi todo
+              el ancho, así que el degradado también cubre más superficie. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 sm:via-slate-950/40 to-slate-950/20 sm:to-transparent" />
+
+          {/* absolute inset-0 (no "relative h-full"): el padre solo define
+              min-height, no height, así que un hijo en flujo normal con
+              h-full cae en una referencia circular y el navegador lo
+              resuelve como "auto" — el bloque de texto terminaba con la
+              altura de su propio contenido en vez de la altura real del
+              Hero, por eso "items-center" no tenía espacio donde centrar.
+              Con absolute inset-0 este div toma la altura real del padre
+              (fijada por min-h-[...] más arriba) y el centrado vertical
+              funciona de verdad. */}
+          <div className="absolute inset-0 z-10 flex items-center p-8 sm:p-10 md:p-12">
+            <div className="w-full sm:w-[85%] md:w-[58%] space-y-5 text-left">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -763,38 +788,55 @@ export default function App() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-slate-300 text-sm sm:text-base max-w-xl mx-auto lg:mx-0 leading-relaxed font-light"
+                className="text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed font-light"
               >
                 Renueva tu colección con los tenis que están rompiendo las redes. Referencias seleccionadas para darte el mejor look y la mayor comodidad en cada salida.
               </motion.p>
-            </div>
 
-            {/* Contenedor de la imagen lateral interactiva */}
-            <div className="lg:col-span-5 relative hidden lg:block">
               <motion.div
-                initial={{ opacity: 0, scale: 0.9, rotate: -3 }}
-                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                transition={{ duration: 0.6 }}
-                className="relative z-10 w-full aspect-square max-w-[360px] mx-auto rounded-[32px] overflow-hidden border-4 border-white/10 shadow-2xl"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
               >
-                <img
-                  src="/lema.webp"
-                  alt="Como el 23"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover scale-105"
-                />
-                <div className="absolute bottom-4 left-4 right-4 bg-slate-900/80 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-[10px] font-bold text-brand-sky uppercase tracking-widest">EL CODIGO TRESPA</span>
-                      <p className="font-display font-bold text-sm text-white">Encuentra tu par ideal</p>
-                    </div>
-                    <span className="text-xs font-bold text-white bg-brand-blue px-2.5 py-1 rounded-lg flex items-center"><Flame className="w-3.5 h-3.5" /></span>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="group inline-flex items-center gap-2 bg-white hover:bg-brand-yellow text-slate-900 font-bold text-xs sm:text-sm uppercase tracking-wider px-6 py-3.5 rounded-full shadow-lg transition-colors cursor-pointer"
+                >
+                  Ver Catálogo
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </button>
               </motion.div>
             </div>
           </div>
+
+          {/* Tarjeta flotante de marca (gráfico "23 Trespa Code"), NO de
+              producto — misma posición/estilo que la referencia anterior
+              (fondo oscuro semi-transparente con blur), pero mostrando el
+              lema en vez de datos de un producto destacado. */}
+          {/* "Respiración" sutil y continua en la tarjeta entera (fondo +
+              imagen), con transition por propiedad: opacity/y son la
+              entrada única (delay 0.4s, sin repeat), scale es el loop
+              infinito. Mismo patrón exacto que ya usa SplashScreen.tsx
+              (línea ~28) para combinar una animación de entrada con un
+              loop en el mismo elemento. */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0, scale: [1, 1.03, 1] }}
+            transition={{
+              opacity: { delay: 0.4 },
+              y: { delay: 0.4 },
+              scale: { delay: 0.4, duration: 2.5, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6 z-10 bg-slate-900/80 backdrop-blur-md border border-white/10 p-3 sm:p-4 rounded-2xl shadow-xl"
+          >
+            <img
+              src="/lema.webp"
+              alt="Como el 23 - Trespa Code"
+              referrerPolicy="no-referrer"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto"
+            />
+          </motion.div>
         </div>
       </section>
 

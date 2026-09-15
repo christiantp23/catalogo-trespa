@@ -197,12 +197,20 @@ export default function ProductCard({
     ? (fallbackImages[product.id] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800') 
     : (allImages[activeImgIndex] || product.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800');
 
+  // Ninguna talla disponible en el color elegido (todas agotadas) — se usa
+  // tanto para bloquear el envío en handleAdd como para deshabilitar el
+  // botón visualmente.
+  const noSizesAvailable = currentSizeOptions.length > 0 && currentSizeOptions.every((s) => !s.available);
+
   const handleAdd = () => {
     if (!isOptionsOpen) {
       setIsOptionsOpen(true);
       return;
     }
-    
+
+    const selectedSizeIsAvailable = currentSizeOptions.find((s) => s.size === selectedSize)?.available;
+    if (!selectedSizeIsAvailable) return;
+
     onAddToCart(product, selectedSize, selectedColor);
     setIsAdded(true);
     setTimeout(() => {
@@ -604,9 +612,9 @@ export default function ProductCard({
               id={`add-to-cart-btn-${product.id}`}
               type="button"
               onClick={handleAdd}
-              disabled={isAdded || product.isOutOfStock}
+              disabled={isAdded || product.isOutOfStock || (isOptionsOpen && noSizesAvailable)}
               className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 ${
-                product.isOutOfStock
+                product.isOutOfStock || (isOptionsOpen && noSizesAvailable)
                   ? 'bg-slate-200 border border-slate-300 text-slate-400 cursor-not-allowed shadow-none'
                   : isAdded
                   ? 'bg-emerald-500 text-white'
@@ -617,6 +625,11 @@ export default function ProductCard({
                 <>
                   <X className="w-4 h-4 text-slate-400" />
                   Agotado
+                </>
+              ) : isOptionsOpen && noSizesAvailable ? (
+                <>
+                  <X className="w-4 h-4 text-slate-400" />
+                  Sin tallas disponibles
                 </>
               ) : isAdded ? (
                 <>

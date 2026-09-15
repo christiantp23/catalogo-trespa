@@ -243,7 +243,7 @@ export default function CheckoutModal({
       message += `*Item #${index + 1}: ${item.product.name.toUpperCase()}*\n`;
       message += `   - *Marca:* ${item.product.brand}\n`;
       message += `   - *Categoría:* ${item.product.category}\n`;
-      message += `   - *Talla seleccionada:* US ${item.selectedSize} / Nacional\n`;
+      message += `   - *Talla seleccionada:* EUR ${item.selectedSize}\n`;
       message += `   - *Color elegido:* ${item.selectedColor}\n`;
       message += `   - *Cantidad:* ${item.quantity} par(es)\n`;
       message += `   - *Precio unitario:* ${formatPrice(item.product.price)}\n`;
