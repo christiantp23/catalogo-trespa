@@ -35,7 +35,7 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
         className="w-full max-w-sm bg-white border border-slate-100 rounded-[32px] shadow-xl p-8"
       >
         <div className="flex flex-col items-center mb-6">
-          <img src="/logo.webp" alt="Trespa Store" className="h-16 w-auto object-contain mb-3" />
+          <img src="/logo-trimmed.webp" alt="Trespa Store" className="h-10 sm:h-12 md:h-14 w-auto object-contain mb-3" />
           <h1 className="font-display font-bold text-lg text-slate-900">Panel de administración</h1>
           <p className="text-xs text-slate-400 mt-1">Acceso solo para el equipo de Trespa Store</p>
         </div>

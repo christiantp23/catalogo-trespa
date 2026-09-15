@@ -106,7 +106,7 @@ function FilterPanelBody({
               onClick={() => setSelectedBrand(brand)}
               className={`text-[11px] py-2 px-2 rounded-xl border text-center transition-all duration-200 truncate cursor-pointer font-medium ${
                 selectedBrand === brand
-                  ? 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs'
+                  ? 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs'
                   : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -148,10 +148,10 @@ function FilterPanelBody({
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {[
-            { id: 'Todos', label: 'Todos', Icon: Users, activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
-            { id: 'Dama', label: 'Dama', Icon: Venus, activeClass: 'bg-pink-500 border-pink-500 text-white font-bold shadow-xs' },
-            { id: 'Caballero', label: 'Caballero', Icon: Mars, activeClass: 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs' },
-            { id: 'Unisex', label: 'Unisex', Icon: VenusAndMars, activeClass: 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-xs' },
+            { id: 'Todos', label: 'Todos', Icon: Users, activeClass: 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs' },
+            { id: 'Dama', label: 'Dama', Icon: Venus, activeClass: 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs' },
+            { id: 'Caballero', label: 'Caballero', Icon: Mars, activeClass: 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs' },
+            { id: 'Unisex', label: 'Unisex', Icon: VenusAndMars, activeClass: 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs' },
           ].map((item) => (
             <button
               key={item.id}
@@ -182,7 +182,7 @@ function FilterPanelBody({
             onClick={() => setOnlyDiscounts(false)}
             className={`text-[11px] py-2.5 px-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer font-medium ${
               !onlyDiscounts
-                ? 'bg-slate-900 border-slate-900 text-white font-bold shadow-xs'
+                ? 'bg-brand-blue border-brand-blue text-white font-bold shadow-xs'
                 : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -193,7 +193,7 @@ function FilterPanelBody({
             onClick={() => setOnlyDiscounts(true)}
             className={`text-[11px] py-2.5 px-3.5 rounded-xl border text-left transition-all duration-200 flex items-center gap-1.5 cursor-pointer font-medium ${
               onlyDiscounts
-                ? 'bg-rose-600 border-rose-600 text-white font-bold shadow-xs'
+                ? 'bg-brand-yellow border-brand-yellow text-slate-900 font-bold shadow-xs'
                 : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -423,7 +423,6 @@ export default function App() {
     });
     return scores;
   }, [products]);
-  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'rating'>('default');
   const [onlyDiscounts, setOnlyDiscounts] = useState(false);
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
   const [isSplashLoading, setIsSplashLoading] = useState(true);
@@ -443,7 +442,7 @@ export default function App() {
       setIsCatalogLoading(false);
     }, 600); // 600ms de animación de carga elegante
     return () => clearTimeout(timer);
-  }, [selectedCategory, selectedBrand, selectedGender, sortBy, onlyDiscounts, searchQuery]);
+  }, [selectedCategory, selectedBrand, selectedGender, onlyDiscounts, searchQuery]);
   
   // Cargar búsqueda desde la URL al iniciar la aplicación (para compartir productos desde WhatsApp)
   useEffect(() => {
@@ -656,15 +655,11 @@ export default function App() {
     return matchesSearch && matchesCategory && matchesBrand && matchesGender && matchesDiscounts && matchesPrice;
   });
 
-  // Sort filtered products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === 'price_asc') return a.price - b.price;
-    if (sortBy === 'price_desc') return b.price - a.price;
-    if (sortBy === 'rating') return b.rating - a.rating;
-
-   // El orden por defecto ('default' / Recomendados) será de manera aleatoria estable por sesión
-    return (randomScores[a.id] || 0) - (randomScores[b.id] || 0);
-  });
+  // Orden estable y aleatorio por sesión (evita que los productos salten
+  // de posición al agregarlos al carrito o interactuar con los filtros)
+  const sortedProducts = [...filteredProducts].sort(
+    (a, b) => (randomScores[a.id] || 0) - (randomScores[b.id] || 0)
+  );
 
     // ==========================================
   // ESTADO DE PAGINACIÓN / CARGAR MÁS
@@ -676,7 +671,7 @@ export default function App() {
   // Reiniciar la cantidad visible cada vez que el usuario aplique algún filtro
   useEffect(() => {
     setVisibleCount(PRODUCTS_PER_PAGE);
-  }, [searchQuery, selectedCategory, selectedBrand, selectedGender, sortBy, onlyDiscounts, minPrice, maxPrice]);
+  }, [searchQuery, selectedCategory, selectedBrand, selectedGender, onlyDiscounts, minPrice, maxPrice]);
 
   // Lista de productos limitada para mostrar en la vista actual
   const displayedProducts = sortedProducts.slice(0, visibleCount);
@@ -690,7 +685,6 @@ export default function App() {
     setSelectedCategory('Todos');
     setSelectedBrand('Todas');
     setSelectedGender('Todos');
-    setSortBy('default');
     setOnlyDiscounts(false);
     setMinPrice(0);
     setMaxPrice(catalogMaxPrice);
@@ -844,30 +838,13 @@ export default function App() {
       <main id="catalog-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
 
         {/* Título y resumen de estadísticas */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-          <div>
-            <h2 className="font-display text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
-              Catálogo de <span className="text-brand-blue">Modelos</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Mostrando {sortedProducts.length} de {products.length} referencias de primera calidad
-            </p>
-          </div>
-
-          {/* selector */}
-          <div className="flex items-center gap-2.5 bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-xs shrink-0 self-start md:self-auto">
-            <span className="text-xs text-slate-400 font-medium">Ordenar por:</span>
-            <select
-              value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
-              className="text-xs font-bold text-slate-800 outline-none cursor-pointer bg-transparent"
-            >
-              <option value="default">Recomendados</option>
-              <option value="price_asc">Menor precio</option>
-              <option value="price_desc">Mayor precio</option>
-              <option value="rating">Calificación de clientes</option>
-            </select>
-          </div>
+        <div className="mb-8">
+          <h2 className="font-display text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+            Catálogo de <span className="text-brand-blue">Modelos</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Mostrando {sortedProducts.length} de {products.length} referencias de primera calidad
+          </p>
         </div>
 
               {/* Banner Informativo Trespa Store - Canal de Telegram & WhatsApp */}
@@ -1139,9 +1116,9 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
       {/* Sección de propuestas de valor y beneficios */}
       <section className="bg-white border-t border-b border-slate-100 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Box 1 */}
-            <div className="flex gap-4 p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-xs">
               <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
                 <CheckCircle className="w-6 h-6" />
               </div>
@@ -1153,8 +1130,8 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
               </div>
             </div>
 
-            {/* Box 2 */}
-            <div className="flex gap-4 p-2">
+            {/* Card 2 */}
+            <div className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-xs">
               <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
                 <Truck className="w-6 h-6" />
               </div>
@@ -1166,21 +1143,8 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
               </div>
             </div>
 
-            {/* {/* Box 3 *
-            <div className="flex gap-4 p-2">
-              <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
-                <Percent className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Cambio sin Costo</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  ¿La talla no te quedó? No te preocupes. Realizamos el primer cambio de talla completamente gratis.
-                </p>
-              </div>
-            </div> */}
-
-            {/* Box 4 */}
-            <div className="flex gap-4 p-2">
+            {/* Card 3 */}
+            <div className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-xs">
               <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
                 <Heart className="w-6 h-6" />
               </div>

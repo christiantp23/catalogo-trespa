@@ -94,18 +94,17 @@ export default function AdminApp() {
       <div className="bg-white border-b border-slate-100 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           {/* Logo + título del panel. logo.webp es un lienzo cuadrado con
-              mucho margen en blanco alrededor de la marca; se recorta ese
-              margen mostrando solo el recuadro donde está el contenido real
-              (53.7% ancho x 22.2% alto, centrado) en vez de escalarlo entero
-              y verse diminuto. */}
+              mucho margen en blanco alrededor de la marca — usamos
+              logo-trimmed.webp (mismo logo, recortado al contenido real,
+              sin el margen sobrante) para que se vea nítido y de buen
+              tamaño al escalarlo por altura, sin necesitar el recorte por
+              CSS que hacía falta antes con el original cuadrado. */}
           <div className="flex items-center gap-3 shrink-0 min-w-0">
-            <div className="h-9 w-[83px] overflow-hidden relative shrink-0">
-              <img
-                src="/logo.webp"
-                alt="Trespa Store"
-                className="absolute top-1/2 left-1/2 h-[151px] w-[151px] max-w-none -translate-x-1/2 -translate-y-1/2"
-              />
-            </div>
+            <img
+              src="/logo-trimmed.webp"
+              alt="Trespa Store"
+              className="h-9 w-auto object-contain shrink-0"
+            />
             <div className="h-6 w-px bg-slate-200 shrink-0" />
             <h1 className="text-base font-bold text-blue-900 whitespace-nowrap">Panel Admin</h1>
           </div>

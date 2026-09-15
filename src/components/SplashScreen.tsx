@@ -1,5 +1,5 @@
 ﻿import { motion } from 'motion/react';
-import { Sparkle} from 'lucide-react';
+import { Footprints } from 'lucide-react';
 
 interface SplashScreenProps {
     onComplete: () => void;
@@ -48,7 +48,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
                     {/* Imagen de calzado premium con filtro de sombra elegante */}
                     <img
-                        src="/logo.webp"
+                        src="/logo-trimmed.webp"
                         alt="Trespa Sneaker Icon"
                         referrerPolicy="no-referrer"
                         className="w-36 h-36 sm:w-40 sm:h-40 object-contain relative z-10 select-none drop-shadow-[0_20px_35px_rgba(59,130,246,0.35)]"
@@ -68,7 +68,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                         }}
                         className="flex items-center justify-center gap-2 text-[10px] font-bold tracking-[0.35em] text-brand-blue uppercase"
                     >
-                        <Sparkle className="w-3.5 h-3.5 text-brand-yellow animate-spin-slow" />
+                        <Footprints className="w-3.5 h-3.5 text-brand-yellow" />
                         Catálogo Trespa Store
                     </motion.div>
 
