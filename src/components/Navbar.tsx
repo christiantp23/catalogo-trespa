@@ -116,7 +116,7 @@ export default function Navbar({
               />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-900 truncate">{p.name}</p>
-                <p className="text-[10px] text-slate-400 truncate">{p.brand}</p>
+                <p className="text-[10px] text-slate-500 truncate">{p.brand}</p>
               </div>
             </button>
           ))}
@@ -219,6 +219,7 @@ export default function Navbar({
               type="button"
               onClick={onCartOpen}
               whileTap={{ scale: 0.95 }}
+              aria-label="Ver carrito de compras"
               className="relative w-11 h-11 md:w-12 md:h-12 rounded-2xl border border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 hover:text-brand-blue transition-all shadow-xs"
             >
               <ShoppingBag className="w-5 h-5" />

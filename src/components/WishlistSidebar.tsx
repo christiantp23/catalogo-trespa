@@ -91,7 +91,7 @@ export default function WishlistSidebar({
                                 </div>
                                 <div>
                                     <h2 className="font-display text-lg font-bold text-slate-900">Mis Favoritos</h2>
-                                    <p className="text-xs text-slate-400">
+                                    <p className="text-xs text-slate-500">
                                         {wishlistItems.length} {wishlistItems.length === 1 ? 'modelo guardado' : 'modelos guardados'}
                                     </p>
                                 </div>
@@ -117,7 +117,7 @@ export default function WishlistSidebar({
                                         <Heart className="w-8 h-8" />
                                     </div>
                                     <h3 className="font-display font-bold text-slate-900 text-base mb-1">Tu lista está vacía</h3>
-                                    <p className="text-xs text-slate-400 max-w-xs mb-6">
+                                    <p className="text-xs text-slate-500 max-w-xs mb-6">
                                         ¿Te gustó algún modelo? Agrégalo a tu lista de favoritos con el corazón para tenerlo en la mira antes de decidirte.
                                     </p>
                                     <button
@@ -168,7 +168,7 @@ export default function WishlistSidebar({
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
-                                                <p className="text-[11px] text-slate-400 font-medium">
+                                                <p className="text-[11px] text-slate-500 font-medium">
                                                     Marca: {product.brand} | Categoría: {product.category}
                                                 </p>
                                             </div>

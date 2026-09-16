@@ -577,7 +577,7 @@ export default function CheckoutModal({
                     {/* Order summary small banner */}
                     <div className="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                        <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider">
                           Total a pagar
                         </span>
                         <p className="text-lg font-bold font-display text-slate-900">
@@ -591,7 +591,7 @@ export default function CheckoutModal({
 
                     {/* Proceso de compra banner */}
                     <div className="bg-slate-50/50 border border-slate-100/80 rounded-2xl p-4 text-left space-y-2.5">
-                      <h4 className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                      <h4 className="text-[10px] font-bold uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
                         <ClipboardList className="w-3.5 h-3.5 text-brand-blue" />
                         ¿Qué pasa al hacer clic abajo?
                       </h4>
@@ -663,7 +663,7 @@ export default function CheckoutModal({
 
                   {/* Beautiful visual next steps timeline */}
                   <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 text-left space-y-4">
-                    <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">
+                    <h4 className="text-xs font-bold uppercase text-slate-600 tracking-wider mb-2">
                       ¿Qué pasa a continuación?
                     </h4>
                     

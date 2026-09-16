@@ -92,7 +92,7 @@ export default function CartSidebar({
                 </div>
                 <div>
                   <h2 className="font-display text-lg font-bold text-slate-900">Tu Carrito</h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     {cartItems.length} {cartItems.length === 1 ? 'modelo seleccionado' : 'modelos seleccionados'}
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export default function CartSidebar({
                     <ShoppingBag className="w-8 h-8" />
                   </div>
                   <h3 className="font-display font-bold text-slate-900 text-base mb-1">Tu carrito está vacío</h3>
-                  <p className="text-xs text-slate-400 max-w-xs mb-6">
+                  <p className="text-xs text-slate-500 max-w-xs mb-6">
                     Explora nuestra colección premium de tenis deportivos y agrega tus favoritos.
                   </p>
                   <button
@@ -210,7 +210,7 @@ export default function CartSidebar({
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="text-[11px] text-slate-400 font-medium">
+                        <p className="text-[11px] text-slate-500 font-medium">
                           Marca: {item.product.brand} | Talla: <span className="text-brand-blue font-bold">{item.selectedSize}</span> | Color: {item.selectedColor}
                         </p>
                       </div>
@@ -240,12 +240,12 @@ export default function CartSidebar({
                          {/* Precio total */}
                           <div className="flex flex-col items-end">
                             {(item.product.price % 10000 === 5000) ? (
-                              <span className="text-[11px] text-slate-400 line-through font-display">
+                              <span className="text-[11px] text-slate-500 line-through font-display">
                                 {formatPrice((item.product.price + 15000) * item.quantity)}
                               </span>
                             ) : (
                               item.product.originalPrice && item.product.originalPrice > item.product.price && (
-                                <span className="text-[11px] text-slate-400 line-through font-display">
+                                <span className="text-[11px] text-slate-500 line-through font-display">
                                   {formatPrice(item.product.originalPrice * item.quantity)}
                                 </span>
                               )
@@ -314,7 +314,7 @@ export default function CartSidebar({
                   Solicitar Pedido
                   <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                 </button>
-                <p className="text-[10px] text-center text-slate-400">
+                <p className="text-[10px] text-center text-slate-500">
                   Completa tus datos en el siguiente paso para enviar tu orden por WhatsApp.
                 </p>
               </div>

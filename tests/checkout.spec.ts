@@ -1,5 +1,5 @@
 /**
- * ⚠️ ESTE TEST PEGA CONTRA EL SITIO EN VIVO (https://catalogotrespastore.netlify.app),
+ * ⚠️ ESTE TEST PEGA CONTRA EL SITIO EN VIVO (https://trespastore.netlify.app),
  * NO contra localhost — a propósito, para probar exactamente lo que usan los
  * clientes reales.
  *
@@ -25,7 +25,10 @@
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
 
-const SITE_URL = 'https://catalogotrespastore.netlify.app';
+// TEMPORAL: apunta a local porque Netlify está pausado hasta el 11 de
+// octubre por los créditos del plan gratuito. Volver a la URL de producción
+// (https://trespastore.netlify.app) apenas el sitio esté reactivado.
+const SITE_URL = 'http://localhost:4173';
 
 // Mismos valores públicos que usa src/lib/supabase.ts (la anon key es segura
 // de exponer: la seguridad real la da la Row Level Security de Supabase).
@@ -144,13 +147,18 @@ test('el checkout público guarda la orden en Supabase', async ({ page, context 
       context.waitForEvent('page', { timeout: 20_000 }),
       page.locator('#checkout-modal form button[type="submit"]').click(),
     ]);
-    expect(popup.url()).toContain('wa.me');
-    await popup.close();
 
-    // Confirmar en Supabase (logueado como admin) que la orden se guardó de verdad.
+    // Justo acá, apenas se envió el checkout, la orden YA existe en Supabase
+    // (es efecto del sitio real). Logueamos y la buscamos de inmediato para
+    // capturar su ID lo antes posible: si alguna verificación de más abajo
+    // falla (por ejemplo la de la URL de WhatsApp), el bloque "finally"
+    // todavía puede borrarla y no queda huérfana en el panel de Ventas.
     accessToken = await loginAsAdmin(adminEmail, adminPassword);
     const order = await findTestOrder(accessToken);
     createdOrderId = order?.id ?? null;
+
+    expect(popup.url()).toMatch(/wa\.me|whatsapp\.com/);
+    await popup.close();
 
     expect(order, 'La orden de prueba debería existir en Supabase después del checkout').not.toBeNull();
   } finally {

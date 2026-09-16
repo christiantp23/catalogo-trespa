@@ -2,10 +2,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle } from 'lucide-react';
 import { useSiteSettings } from '../lib/settings';
+import { useHideNearFooter } from '../hooks/useHideNearFooter';
 
 export default function FloatingWhatsapp() {
   const [showTooltip, setShowTooltip] = useState(false);
   const { whatsappNumber } = useSiteSettings();
+  // Se oculta con una transición suave (no de golpe) al llegar a la franja
+  // final del footer ("Términos y condiciones" / "Tratamiento de datos"),
+  // para no taparla.
+  const shouldHide = useHideNearFooter();
 
   // Default pre-filled message for support
   const supportText = encodeURIComponent(
@@ -15,7 +20,9 @@ export default function FloatingWhatsapp() {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-40 flex items-center gap-3"
+      className={`fixed bottom-6 right-6 z-40 flex items-center gap-3 transition-opacity duration-300 ${
+        shouldHide ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      }`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -38,7 +45,7 @@ export default function FloatingWhatsapp() {
         href={waUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative w-14 h-14 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full flex items-center justify-center shadow-xl hover:shadow-[#25D366]/40 transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-green-100"
+        className="relative w-12 h-12 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full flex items-center justify-center shadow-xl hover:shadow-[#25D366]/40 transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-green-100"
         title="Soporte Directo por WhatsApp"
       >
         {/* Breathing Animation Background Ring */}
@@ -49,7 +56,7 @@ export default function FloatingWhatsapp() {
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="currentColor"
-          className="w-7 h-7 relative z-10"
+          className="w-6 h-6 relative z-10"
         >
           <path
             fillRule="evenodd"

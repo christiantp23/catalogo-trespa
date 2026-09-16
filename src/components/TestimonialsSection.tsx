@@ -134,9 +134,12 @@ function TestimonialPhone({ chat, isActive }: { chat: ChatTestimonial; isActive:
                                 <div className="flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     <div>
-                                        <h4 className="font-bold text-[11px] leading-none">
+                                        {/* h3 (no h4): el encabezado anterior en la jerarquía real de la
+                                            página es el h2 "ESTILO EN CADA PASO" de esta misma sección —
+                                            saltar directo a h4 rompía el orden de encabezados. */}
+                                        <h3 className="font-bold text-[11px] leading-none">
                                             {chat.clientName}
-                                        </h4>
+                                        </h3>
                                         <p className="text-[8px] text-white/80 font-light mt-0.5">
                                             reproduciendo unboxing...
                                         </p>
@@ -350,7 +353,11 @@ PUNTOS INDICADORES DE NAVEGACIÓN (Pagination Dots)
                             key={index}
                             type="button"
                             onClick={() => setCurrentIndex(index)}
-                            className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${currentIndex === index
+                            // El punto visible sigue siendo chiquito (h-2.5), pero el área
+                            // clickeable real crece a 24x24px con un pseudo-elemento
+                            // invisible superpuesto, para que sea fácil de acertar en mobile
+                            // sin agrandar el indicador visual.
+                            className={`relative h-2.5 rounded-full transition-all duration-300 cursor-pointer before:absolute before:inset-[-8px] before:content-[''] ${currentIndex === index
                                 ? 'w-7 bg-brand-blue shadow-xs shadow-blue-500/20'
                                 : 'w-2.5 bg-slate-300 hover:bg-slate-400'
                                 }`}
@@ -368,7 +375,7 @@ PUNTOS INDICADORES DE NAVEGACIÓN (Pagination Dots)
 
                 {/* Pie de página interior de testimonios */}
                 <div className="text-center mt-8">
-                    <p className="text-[11px] text-slate-400 font-semibold flex items-center justify-center gap-1.5 flex-wrap">
+                    <p className="text-[11px] text-slate-500 font-semibold flex items-center justify-center gap-1.5 flex-wrap">
                         <span>Únete a los más de</span>
                         <span className="text-slate-900 bg-white border border-slate-150 py-0.5 px-2 rounded-md shadow-xs font-bold">1,500+ clientes</span>
                         <span className="flex items-center gap-1.5">

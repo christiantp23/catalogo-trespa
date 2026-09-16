@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send } from 'lucide-react';
+import { useHideNearFooter } from '../hooks/useHideNearFooter';
 
 // =========================================================================
 // 5. BOTÓN FLOTANTE DEL CATÁLOGO DE TELEGRAM (FloatingTelegram)
@@ -13,17 +14,24 @@ import { Send } from 'lucide-react';
 //   debe mostrarse o no cuando el usuario pasa el cursor sobre el botón.
 // - AnimatePresence: Es un componente de la biblioteca Framer Motion (importada como "motion/react")
 //   que permite animar componentes cuando aparecen o desaparecen de la pantalla (montaje/desmontaje).
-// - Tailwind CSS: Usamos posicionamiento absoluto y fijo ("fixed"), con la clase "bottom-24"
-//   para posicionar este botón exactamente arriba del botón flotante de WhatsApp (que está en bottom-6).
+// - Tailwind CSS: Usamos posicionamiento absoluto y fijo ("fixed"), con la clase "bottom-[88px]"
+//   (24px del borde + 48px de alto + 16px de separación) para posicionar este botón exactamente
+//   arriba del botón flotante de WhatsApp, ahora que ambos son más chicos (w-12 h-12).
 export default function FloatingTelegram() {
     const [showTooltip, setShowTooltip] = useState(false);
+    // Se oculta con una transición suave (no de golpe) al llegar a la franja
+    // final del footer ("Términos y condiciones" / "Tratamiento de datos"),
+    // para no taparla.
+    const shouldHide = useHideNearFooter();
 
     // Enlace oficial de Telegram de la tienda (puedes cambiarlo por tu canal real)
     const telegramChannelUrl = 'https://telegram.me/+k6-HnPX2z6o1NWEx';
 
     return (
         <div
-            className="fixed bottom-24 right-6 z-40 flex items-center gap-3"
+            className={`fixed bottom-[88px] right-6 z-40 flex items-center gap-3 transition-opacity duration-300 ${
+                shouldHide ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
             onMouseEnter={() => setShowTooltip(true)} // Al pasar el cursor, activamos el tooltip
             onMouseLeave={() => setShowTooltip(false)} // Al retirar el cursor, lo ocultamos
         >
@@ -46,7 +54,7 @@ export default function FloatingTelegram() {
                 href={telegramChannelUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative w-14 h-14 bg-[#0088cc] hover:bg-[#0077b3] text-white rounded-full flex items-center justify-center shadow-xl hover:shadow-[#0088cc]/40 transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-blue-100"
+                className="relative w-12 h-12 bg-[#0088cc] hover:bg-[#0077b3] text-white rounded-full flex items-center justify-center shadow-xl hover:shadow-[#0088cc]/40 transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-blue-100"
                 title="Ver Catálogo en Telegram"
             >
                 {/* Anillo exterior animado de respiración */}
@@ -58,7 +66,7 @@ export default function FloatingTelegram() {
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="currentColor"
-                    className="w-7 h-7 relative z-10"
+                    className="w-6 h-6 relative z-10"
                 >
                     <path
                         fillRule="evenodd"

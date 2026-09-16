@@ -2,16 +2,17 @@
 // OPTIMIZADOR DE IMÁGENES (Canvas API, sin librerías externas)
 // =========================================================================
 // Antes de subir cualquier foto a Supabase Storage, la pasamos por acá:
-// se redimensiona (si es más ancha de 1600px) y se recomprime a WebP con
+// se redimensiona (si es más ancha de 900px) y se recomprime a WebP con
 // calidad 0.8. Esto reduce bastante el peso de las fotos que suben desde
 // el celular (que suelen venir en 3000-4000px y varios MB) sin que se note
-// pérdida de nitidez en el catálogo.
+// pérdida de nitidez en el catálogo — las tarjetas de producto nunca se
+// muestran más anchas que eso en pantalla.
 //
 // Si el archivo no es una imagen (por ejemplo un video en Testimonios) o
 // algo falla en el proceso (canvas no soporta WebP, imagen corrupta, etc.),
 // se devuelve el archivo original tal cual — nunca debe bloquear la subida.
 
-const MAX_WIDTH = 1600;
+const MAX_WIDTH = 900;
 const WEBP_QUALITY = 0.8;
 
 function loadImage(file: File): Promise<HTMLImageElement> {

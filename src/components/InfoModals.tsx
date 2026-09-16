@@ -194,7 +194,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                         <span className="text-xs font-black uppercase tracking-widest text-brand-blue font-display">
                           Tallas de Hombre / Unisex
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
                           CABALLERO
                         </span>
                       </div>
@@ -315,14 +315,14 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center gap-0.5">
                           <span className="text-sm font-black text-blue-800 tracking-tighter italic">VISA</span>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Crédito / Débito</span>
+                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-wider">Crédito / Débito</span>
                         </div>
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center gap-0.5">
                           <div className="flex items-center -space-x-1">
                             <div className="w-3.5 h-3.5 rounded-full bg-red-500/80" />
                             <div className="w-3.5 h-3.5 rounded-full bg-amber-500/80" />
                           </div>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-1">Mastercard</span>
+                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-wider mt-1">Mastercard</span>
                         </div>
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center gap-0.5">
                           <img
@@ -332,7 +332,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                             referrerPolicy="no-referrer"
                             className="h-10 w-10 object-contain shadow-sm rounded-full bg-white"
                           />
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Cuentas Débito</span>
+                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-wider">Cuentas Débito</span>
                         </div>
                       </div>
                     </div>
@@ -416,7 +416,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
             <img src="/logo-inter.webp" alt="Logo Interrapidísimo" loading="lazy" className="h-10 w-auto object-contain" />
           </div>
         </div>
-        <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] text-slate-400 font-medium">
+        <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] text-slate-600 font-medium">
           <p>• Tiempo estimado: 2 a 5 días hábiles</p>
           <p>• Guía de Rastreo</p>
         </div>
@@ -436,7 +436,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
             <img src="/logo-coordi.webp" alt="Logo Coordinadora" loading="lazy" className="h-10 w-auto object-contain" />
           </div>
         </div>
-        <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] text-slate-400 font-medium">
+        <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] text-slate-600 font-medium">
           <p>• Tiempo estimado: 2 a 5 días hábiles</p>
           <p>• Rastreo de guía</p>
         </div>

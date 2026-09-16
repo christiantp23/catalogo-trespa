@@ -359,6 +359,12 @@ export default function ProductCard({
           src={currentImage}
           alt={product.name}
           loading="lazy" // Carga diferida para optimizar el rendimiento inicial de la página
+          // width/height (relación 1:1, igual que el contenedor pt-[100%])
+          // le dan al navegador la proporción de la imagen ANTES de que
+          // cargue, así nunca reserva un alto equivocado — el layout ya no
+          // depende solo del truco de padding-top del contenedor.
+          width={900}
+          height={900}
           onError={() => setImageError(true)}
           referrerPolicy="no-referrer"
           className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
@@ -409,7 +415,10 @@ export default function ProductCard({
                     e.stopPropagation();
                     setActiveImgIndex(i);
                   }}
-                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                  // El punto visible se queda chiquito (w-1.5 h-1.5); el área
+                  // clickeable real crece a >=24x24px con un pseudo-elemento
+                  // invisible superpuesto, para que sea fácil de tocar en mobile.
+                  className={`relative w-1.5 h-1.5 rounded-full transition-all duration-200 cursor-pointer before:absolute before:inset-[-9px] before:content-[''] ${
                     i === activeImgIndex ? 'bg-white w-3' : 'bg-white/50 hover:bg-white/80'
                   }`}
                   aria-label={`Ver foto ${i + 1}`}
@@ -486,7 +495,7 @@ export default function ProductCard({
                   <span className="text-xl font-black font-display text-red-600">
                     {formatPrice(product.price)}
                   </span>
-                  <span className="text-xs text-slate-400 line-through font-medium">
+                  <span className="text-xs text-slate-500 line-through font-medium">
                     {formatPrice(product.price + 15000)}
                   </span>
                 </div>
@@ -503,7 +512,7 @@ export default function ProductCard({
                 {formatPrice(product.price)}
               </span>
               {product.originalPrice && (
-                <span className="text-xs text-slate-400 line-through font-medium">
+                <span className="text-xs text-slate-500 line-through font-medium">
                   {formatPrice(product.originalPrice)}
                 </span>
               )}
@@ -535,7 +544,7 @@ export default function ProductCard({
               >
                 {/* Elegir Color */}
                 <div className="mb-3">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider block mb-1.5">
                     Color: {selectedColor}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -559,7 +568,7 @@ export default function ProductCard({
                 {/* Elegir talla */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider block">
                       Talla (EUR): {selectedSize}
                     </span>
                     {onOpenSizeGuide && (

@@ -50,7 +50,7 @@ export default function ToastContainer({ toasts, onClose }: ToastContainerProps)
                                 <p className="text-xs text-slate-500 mt-0.5 truncate font-semibold">
                                     {toast.productName}
                                 </p>
-                                <p className="text-[10px] text-slate-400 mt-1">
+                                <p className="text-[10px] text-slate-500 mt-1">
                                     {toast.message}
                                 </p>
                             </div>

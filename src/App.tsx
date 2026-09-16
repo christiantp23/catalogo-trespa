@@ -31,6 +31,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Product, CartItem, ToastNotification} from './types';
 import { fetchProducts } from './lib/products';
 import { useSiteSettings } from './lib/settings';
+import Hero from './components/Hero';
+import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import ProductSkeleton from './components/ProductSkeleton';
@@ -41,9 +43,9 @@ import FloatingWhatsapp from './components/FloatingWhatsapp';
 import FloatingTelegram from './components/FloatingTelegram';
 import InfoModals from './components/InfoModals';
 import TestimonialsSection from './components/TestimonialsSection'; // Nuevo: Importamos la sección de testimonios de clientes (WhatsApp chats)
+import TrustSection from './components/TrustSection';
 import ToastContainer from './components/ToastContainer';
 import SplashScreen from './components/SplashScreen';
-//import FloatingCatalogStats from './components/FloatingCatalogStats';
 
 // =========================================================================
 // CONTENIDO DEL PANEL DE FILTROS (Marca / Categoría / Colección / Ofertas / Precio)
@@ -96,7 +98,7 @@ function FilterPanelBody({
       <div className="space-y-3">
         <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Marca</span>
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Marca</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {BRANDS.map((brand) => (
@@ -120,7 +122,7 @@ function FilterPanelBody({
       <div className="space-y-3">
         <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
           <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Categoría</span>
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Categoría</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {CATEGORIES.map((category) => (
@@ -144,7 +146,7 @@ function FilterPanelBody({
       <div className="space-y-3">
         <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
           <Users className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Colección</span>
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Colección</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {[
@@ -174,7 +176,7 @@ function FilterPanelBody({
       <div className="space-y-3">
         <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
           <Percent className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ofertas</span>
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Ofertas</span>
         </div>
         <div className="flex flex-col gap-2">
           <button
@@ -206,12 +208,12 @@ function FilterPanelBody({
       <div className="space-y-3">
         <div className="flex items-center gap-1.5 pb-2 border-b border-slate-50">
           <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Precio</span>
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Precio</span>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
-            <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            <label className="block text-[9px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
               Desde $
             </label>
             <input
@@ -227,7 +229,7 @@ function FilterPanelBody({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            <label className="block text-[9px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
               Hasta $
             </label>
             <input
@@ -275,7 +277,7 @@ function FilterPanelBody({
           />
         </div>
 
-        <p className="text-[10px] text-slate-400 text-center">
+        <p className="text-[10px] text-slate-600 text-center">
           {formatPriceCOP(minPrice)} — {formatPriceCOP(maxPrice)}
         </p>
       </div>
@@ -766,117 +768,7 @@ export default function App() {
       />
 
  {/* Sección del Banner Principal (Hero) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10">
-        <div className="relative rounded-[40px] overflow-hidden shadow-2xl min-h-[420px] sm:min-h-[460px] md:min-h-[520px]">
-          {/* Foto de fondo: dos modelos con hoodies y sneakers Trespa Store.
-              object-position se ajusta por breakpoint porque el recorte que
-              hace "cover" es muy distinto en mobile (imagen casi cuadrada,
-              corta mucho a los costados -> center) que en desktop (imagen
-              bastante más ancha que el contenedor, corta arriba/abajo ->
-              subimos el foco al 25% para priorizar caras y logo del hoodie
-              por sobre los tenis). Va PRIMERA en el DOM (detrás, sin
-              z-index) para que el degradado y el texto pinten encima. */}
-          <img
-            src="/hero.webp"
-            alt="Modelos usando hoodies y sneakers Trespa Store"
-            className="absolute inset-0 w-full h-full object-cover object-center md:object-[center_25%]"
-          />
-
-          {/* Degradado oscuro para legibilidad del texto: más cerrado a la
-              izquierda (donde va el texto) y transparente hacia la derecha
-              (donde están los modelos). En mobile el texto ocupa casi todo
-              el ancho, así que el degradado también cubre más superficie. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 sm:via-slate-950/40 to-slate-950/20 sm:to-transparent" />
-
-          {/* absolute inset-0 (no "relative h-full"): el padre solo define
-              min-height, no height, así que un hijo en flujo normal con
-              h-full cae en una referencia circular y el navegador lo
-              resuelve como "auto" — el bloque de texto terminaba con la
-              altura de su propio contenido en vez de la altura real del
-              Hero, por eso "items-center" no tenía espacio donde centrar.
-              Con absolute inset-0 este div toma la altura real del padre
-              (fijada por min-h-[...] más arriba) y el centrado vertical
-              funciona de verdad. */}
-          <div className="absolute inset-0 z-10 flex items-center p-8 sm:p-10 md:p-12">
-            <div className="w-full sm:w-[85%] md:w-[58%] space-y-5 text-left">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-sky/10 border border-brand-sky/20 text-brand-sky text-xs font-semibold tracking-wider uppercase"
-              >
-                <Truck className="w-3.5 h-3.5" />
-                <span>{bannerText.toUpperCase()}</span>
-                <span className="inline-flex flex-col w-5 h-3.5 rounded-xs overflow-hidden shadow-xs border border-brand-sky/20 shrink-0 select-none" title="Colombia">
-                  <span className="bg-[#FCD116] h-1/2 w-full" />
-                  <span className="bg-[#003893] h-1/4 w-full" />
-                  <span className="bg-[#CE1126] h-1/4 w-full" />
-                </span>
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="font-display text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.1]"
-              >
-                ESTILO EN CADA<span className="text-brand-yellow"> PASO</span>
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed font-light"
-              >
-                Renueva tu colección con los tenis que están rompiendo las redes. Referencias seleccionadas para darte el mejor look y la mayor comodidad en cada salida.
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="group inline-flex items-center gap-2 bg-white hover:bg-brand-yellow text-slate-900 font-bold text-xs sm:text-sm uppercase tracking-wider px-6 py-3.5 rounded-full shadow-lg transition-colors cursor-pointer"
-                >
-                  Ver Catálogo
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-                </button>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Tarjeta flotante de marca (gráfico "23 Trespa Code"), NO de
-              producto — misma posición/estilo que la referencia anterior
-              (fondo oscuro semi-transparente con blur), pero mostrando el
-              lema en vez de datos de un producto destacado. */}
-          {/* "Respiración" sutil y continua en la tarjeta entera (fondo +
-              imagen), con transition por propiedad: opacity/y son la
-              entrada única (delay 0.4s, sin repeat), scale es el loop
-              infinito. Mismo patrón exacto que ya usa SplashScreen.tsx
-              (línea ~28) para combinar una animación de entrada con un
-              loop en el mismo elemento. */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0, scale: [1, 1.03, 1] }}
-            transition={{
-              opacity: { delay: 0.4 },
-              y: { delay: 0.4 },
-              scale: { delay: 0.4, duration: 2.5, repeat: Infinity, ease: 'easeInOut' },
-            }}
-            className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6 z-10 bg-slate-900/80 backdrop-blur-md border border-white/10 p-3 sm:p-4 rounded-2xl shadow-xl"
-          >
-            <img
-              src="/lema.webp"
-              alt="Como el 23 - Trespa Code"
-              referrerPolicy="no-referrer"
-              className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto"
-            />
-          </motion.div>
-        </div>
-      </section>
+      <Hero bannerText={bannerText} />
 
       {/* Catálogo principal y sección de filtros */}
       <main id="catalog-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
@@ -886,7 +778,7 @@ export default function App() {
           <h2 className="font-display text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
             Catálogo de <span className="text-brand-blue">Modelos</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Mostrando {sortedProducts.length} de {products.length} referencias de primera calidad
           </p>
         </div>
@@ -1103,7 +995,7 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
               <h3 className="font-display font-bold text-lg text-slate-900 mb-1">
                 {productsError ? 'No se pudo cargar el catálogo' : 'No encontramos coincidencias'}
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto mb-6 leading-relaxed">
+              <p className="text-xs text-slate-500 max-w-xs mx-auto mb-6 leading-relaxed">
                 {productsError
                   ? 'Hubo un problema de conexión con el catálogo. Revisa tu conexión a internet e intenta recargar la página.'
                   : 'No hay productos que cumplan con los filtros de búsqueda aplicados. Intenta restablecer los filtros para ver todo el inventario.'}
@@ -1137,7 +1029,7 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
             {/* Botón de Cargar Más para limitar la visualización y mejorar la velocidad de carga inicial */}
               {visibleCount < sortedProducts.length && (
                 <div className="flex flex-col items-center justify-center pt-4">
-                  <p className="text-xs text-slate-400 mb-3.5 font-medium">
+                  <p className="text-xs text-slate-500 mb-3.5 font-medium">
                     Mostrando <span className="font-bold text-slate-800">{displayedProducts.length}</span> de <span className="font-bold text-slate-800">{sortedProducts.length}</span> referencias de tenis
                   </p>
                   <motion.button
@@ -1158,50 +1050,7 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
       </main>
 
       {/* Sección de propuestas de valor y beneficios */}
-      <section className="bg-white border-t border-b border-slate-100 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Card 1 */}
-            <div className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Calidad Garantizada</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Ofrecemos zapatillas importadas con un alto nivel de detalle, comodidad y excelente relación calidad-precio.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
-                <Truck className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Envío Gratis</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Llegamos a cada rincón de Colombia sin costo adicional. Despachos rápidos con rastreo garantizado.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-xs">
-              <div className="w-12 h-12 rounded-2xl bg-brand-sky/10 flex items-center justify-center text-brand-blue shrink-0">
-                <Heart className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Atención Humana</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Nada de bots aburridos. Chatea directamente con asesores apasionados por los tenis deportivos.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <TrustSection />
 
       {/* =========================================================================
         SECCIÓN DE TESTIMONIOS REALES (WhatsApp style)
@@ -1212,128 +1061,7 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
       <TestimonialsSection />
 
     {/* Footer */}
-      <footer className="bg-slate-950 text-white pt-16 pb-8 border-t border-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
-            
-            {/* Col 1 - Centrada y alineada visualmente hacia arriba */}
-            <div className="md:col-span-5 flex flex-col items-center text-center space-y-4 md:-mt-4">
-              <img
-                src="/logo-foot.webp"
-                alt="TRESPA STORE"
-                loading="lazy" // Carga diferida para optimizar el rendimiento inicial de la página
-                className="h-24 sm:h-14 md:h-48 w-auto object-contain"
-                referrerPolicy="no-referrer"
-              />
-              <p className="text-xs text-slate-400 leading-relaxed max-w-sm font-light">
-                En Trespa Store creemos que unas buenas zapatillas hablan por ti. Por eso ofrecemos referencias importadas con gran nivel de detalle, pensadas para quienes valoran el estilo.
-              </p>
-              {/* Redes sociales centradas */}
-              <div className="flex items-center justify-center gap-2.5 pt-2">
-                <a
-                  href="https://instagram.com/trespastore"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-800 transition-all cursor-pointer"
-                  title="Síguenos en Instagram"
-                >
-                  <Instagram className="w-4 h-4" />
-                </a>
-                <a
-                  href="https://facebook.com/trespastore"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-800 transition-all cursor-pointer"
-                  title="Síguenos en Facebook"
-                >
-                  <Facebook className="w-4 h-4" />
-                </a>
-                <a
-                  href="https://tiktok.com/@trespastore"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-800 transition-all cursor-pointer"
-                  title="Síguenos en TikTok"
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.02 1.59 4.23.95.17 1.98.11 2.97-.16v3.83c-.94.13-1.89.11-2.83-.07-.46-.09-.9-.25-1.31-.48-.68-.39-1.22-.96-1.58-1.66v6.86c.01 1.93-.65 3.86-1.88 5.29-1.46 1.71-3.69 2.68-5.91 2.5-2.5-.18-4.78-1.87-5.56-4.24-.96-2.87.5-6.14 3.32-7.14.73-.26 1.51-.36 2.28-.3v3.74c-.4-.11-.84-.11-1.25-.03-1.12.21-2.02 1.13-2.18 2.26-.25 1.63.85 3.2 2.47 3.44 1.25.19 2.52-.45 2.96-1.63.15-.39.2-.82.19-1.24V.02z" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-
-            {/* Col 2 */}
-            <div className="md:col-span-3 space-y-4">
-              <h4 className="font-display font-bold text-xs uppercase tracking-widest text-brand-sky">Colecciones</h4>
-              <ul className="space-y-2 text-xs text-slate-400">
-                <li><button type="button" onClick={() => { setSelectedCategory('Urbano'); document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="hover:text-white transition-colors cursor-pointer">Urbanos</button></li>
-                <li><button type="button" onClick={() => { setSelectedCategory('Deportivo'); document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="hover:text-white transition-colors cursor-pointer">Deportivos</button></li>
-                <li><button type="button" onClick={() => { setSelectedCategory('Colección'); document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="hover:text-white transition-colors cursor-pointer">Ediciones Especiales</button></li>
-                
-                {/* Íconos alineados uniformemente */}
-                <li className="pt-2 border-t border-slate-900/60">
-                  <button type="button" onClick={() => openInfoModal('tallas')} className="text-brand-sky hover:text-white transition-colors cursor-pointer flex items-center gap-2">
-                    <Ruler className="w-4 h-4" />
-                    <span>Guía de Tallas</span>
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => openInfoModal('politicas')} className="text-brand-sky hover:text-white transition-colors cursor-pointer flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Políticas 2026</span>
-                  </button>
-                </li>
-                <li>
-                  <button type="button" onClick={() => openInfoModal('pagos')} className="text-brand-sky hover:text-white transition-colors cursor-pointer flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Medios de Pago</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 3 */}
-            <div className="md:col-span-4 space-y-4">
-              <h4 className="font-display font-bold text-xs uppercase tracking-widest text-brand-sky">Contacto & Horarios</h4>
-              <div className="text-xs text-slate-400 space-y-2 leading-relaxed">
-                <p>
-                  Soporte nacional en: <br />
-                  <a href="tel:+573008165725" className="text-white hover:underline font-semibold">+57 300 816 5725</a>
-                </p>
-                <div className="pt-2 border-t border-slate-900/60 space-y-1">
-                  <p className="text-slate-300 font-medium text-[11px] uppercase tracking-wider flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Horario de atención:</p>
-                  <p>Lunes a Viernes: <span className="text-white font-medium">10:00 AM a 6:00 PM</span></p>
-                  <p>Sábados: <span className="text-white font-medium">9:00 AM a 2:00 PM</span></p>
-                  <p className="text-rose-400 font-medium text-[11px] pt-0.5">Domingos y Festivos: No hay servicio</p>
-                </div>
-              </div>
-              <div className="pt-2">
-                <a
-                  href="https://wa.me/573008165725"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-bold text-[#25D366] hover:underline"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse shrink-0" />
-                  Asesor de Turno Conectado en WhatsApp
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-slate-900" />
-
-          {/* Copyright, terms */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 font-light text-center sm:text-left">
-            <p>© 2026 Trespa Store. Todos los derechos reservados. Desarrollado por Trespa Store</p>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-slate-300">Términos y condiciones</a>
-              <span>•</span>
-              <a href="#" className="hover:text-slate-300">Tratamiento de datos personales</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer openInfoModal={openInfoModal} />
 
       {/* CMenú lateral deslizante del carrito (CartSidebar) */}
       <CartSidebar
@@ -1385,9 +1113,6 @@ className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-500/10 hover:bg-e
 
       {/* Floating breathing WhatsApp Support button */}
       <FloatingWhatsapp />
-
-       {/* Control y balance de inventario del catálogo (Estadísticas Temporales) */}
-      {/* <FloatingCatalogStats /> */}
 
       {/* =========================================================================
         BOTÓN FLOTANTE DEL CATÁLOGO DE TELEGRAM (FloatingTelegram)
