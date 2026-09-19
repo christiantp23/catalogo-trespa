@@ -313,17 +313,17 @@ export default function AdminDashboard() {
           </h1>
           <p className="text-xs text-slate-400 dark:text-slate-500">{products.length} {showArchived ? 'archivados' : 'en catálogo'}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
             onClick={handleExportCatalog}
             disabled={exporting}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-blue hover:text-brand-blue transition-colors disabled:opacity-60"
+            className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-blue hover:text-brand-blue transition-colors disabled:opacity-60 flex-1 sm:flex-none whitespace-nowrap"
           >
             <Download className="w-3.5 h-3.5" /> {exporting ? 'Exportando...' : 'Exportar catálogo'}
           </button>
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${
+            className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors flex-1 sm:flex-none whitespace-nowrap ${
               showArchived
                 ? 'bg-brand-blue text-white border-brand-blue'
                 : 'text-slate-500 border-slate-200 hover:border-slate-300 dark:text-slate-400 dark:border-slate-700 dark:hover:border-slate-600'
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
           {!showArchived && (
             <button
               onClick={openNewProduct}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-blue hover:bg-slate-950 text-white text-xs font-bold uppercase tracking-wide transition-colors shrink-0"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-blue hover:bg-slate-950 text-white text-xs font-bold uppercase tracking-wide transition-colors shrink-0 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" /> Nuevo producto
             </button>
@@ -396,7 +396,10 @@ export default function AdminDashboard() {
       {/* Barra de acciones en lote */}
       {selected.size > 0 && (
         <div className="flex items-center gap-2 mb-4 px-4 py-3 bg-brand-blue/5 dark:bg-brand-sky/10 border border-brand-blue/20 dark:border-brand-sky/20 rounded-2xl flex-wrap">
-          <span className="text-xs font-bold text-brand-blue dark:text-brand-sky">{selected.size} seleccionados</span>
+          <span className="text-xs font-bold text-brand-blue dark:text-brand-sky">
+            {selected.size} seleccionados
+            {filtered.length > PRODUCTS_PER_PAGE && ' (pueden abarcar varias páginas)'}
+          </span>
           <span className="text-xs text-slate-400 dark:text-slate-500">Marcar como:</span>
           <button
             onClick={() => handleBulkStatus('disponible')}
@@ -446,6 +449,7 @@ export default function AdminDashboard() {
               >
                 {allFilteredSelected ? <CheckSquare className="w-4 h-4 text-brand-blue" /> : <Square className="w-4 h-4" />}
                 Seleccionar todos
+                {filtered.length > PRODUCTS_PER_PAGE && ` (${filtered.length} resultados)`}
               </button>
 
               <AnimatePresence initial={false}>

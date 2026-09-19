@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import { X, AlertCircle, Upload, Loader2, ImageOff, Plus, Trash2, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { X, AlertCircle, Upload, Loader2, ImageOff, Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
   DbProduct,
@@ -330,6 +330,22 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     );
   };
 
+  // Reordena colores: intercambia de lugar con el vecino visible más
+  // cercano en esa dirección (mismo patrón que AdminTestimonials.tsx).
+  const handleMoveColorway = (colorKey: string, direction: -1 | 1) => {
+    setColorways((prev) => {
+      const visible = prev.filter((c) => !c.deleted);
+      const visIndex = visible.findIndex((c) => c.key === colorKey);
+      const target = visible[visIndex + direction];
+      if (!target) return prev;
+      const a = prev.findIndex((c) => c.key === colorKey);
+      const b = prev.findIndex((c) => c.key === target.key);
+      const reordered = [...prev];
+      [reordered[a], reordered[b]] = [reordered[b], reordered[a]];
+      return reordered;
+    });
+  };
+
   // -- tallas por color --
   // Ciclo de 3 estados por click: no existe -> disponible -> agotada (se
   // conserva la fila con available:false, no se borra) -> click de nuevo la
@@ -521,6 +537,9 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   // crea lo nuevo, actualiza lo que cambió, borra lo marcado.
   const saveColorways = async (productId: string) => {
     const original = colorwaysFromProduct(product);
+    // Orden final visible (sin los borrados): su posición en este array es
+    // el nuevo sort_order de cada color.
+    const finalOrder = colorways.filter((c) => !c.deleted);
 
     for (const c of colorways) {
       if (c.id && c.deleted) {
@@ -529,11 +548,20 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       }
       if (c.deleted) continue; // nuevo y borrado antes de guardar: no hace nada
 
+      const newSortOrder = finalOrder.findIndex((fc) => fc.key === c.key);
+
       if (c.id) {
-        // Color existente: actualizar solo si cambió algo
+        // Color existente: actualizar solo si cambió algo (incluido el orden)
         const orig = original.find((o) => o.id === c.id);
-        if (orig && (orig.name !== c.name || orig.image_url !== c.image_url || orig.available !== c.available)) {
-          await updateColorway(c.id, { name: c.name, image_url: c.image_url, available: c.available });
+        const origSortOrder = original.findIndex((o) => o.id === c.id);
+        if (
+          orig &&
+          (orig.name !== c.name ||
+            orig.image_url !== c.image_url ||
+            orig.available !== c.available ||
+            origSortOrder !== newSortOrder)
+        ) {
+          await updateColorway(c.id, { name: c.name, image_url: c.image_url, available: c.available, sort_order: newSortOrder });
         }
         for (const s of c.sizes) {
           if (s.id && s.deleted) {
@@ -549,7 +577,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
         }
       } else {
         // Color nuevo: se crea recién ahora, junto con sus tallas
-        const created = await addColorway(productId, c.name, c.image_url);
+        const created = await addColorway(productId, c.name, c.image_url, newSortOrder);
         for (const s of c.sizes) {
           if (!s.deleted) await addSize(created.id, s.size, s.available);
         }
@@ -843,9 +871,30 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
             <div className="space-y-3">
               {colorways
                 .filter((c) => !c.deleted)
-                .map((c) => (
+                .map((c, i, visibleColorways) => (
                   <div key={c.key} className="border border-slate-100 dark:border-slate-700 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          title="Mover arriba"
+                          disabled={i === 0}
+                          onClick={() => handleMoveColorway(c.key, -1)}
+                          className="text-slate-300 hover:text-brand-blue dark:text-slate-600 dark:hover:text-brand-sky disabled:opacity-30"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Mover abajo"
+                          disabled={i === visibleColorways.length - 1}
+                          onClick={() => handleMoveColorway(c.key, 1)}
+                          className="text-slate-300 hover:text-brand-blue dark:text-slate-600 dark:hover:text-brand-sky disabled:opacity-30"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
                       <label
                         className="relative w-10 h-10 shrink-0 cursor-pointer group"
                         title={

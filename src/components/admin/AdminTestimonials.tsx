@@ -1,5 +1,18 @@
 import { useEffect, useState, ChangeEvent } from 'react';
-import { Plus, Trash2, Upload, Loader2, ChevronUp, ChevronDown, Video, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Upload,
+  Loader2,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUp,
+  ChevronsDown,
+  Video,
+  Image as ImageIcon,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
 import {
   DbTestimonial,
   fetchAdminTestimonials,
@@ -29,6 +42,10 @@ const PHONE_COLORS = [
 ];
 
 const DEFAULT_CUSTOM_COLOR = '#F59E0B';
+
+// A partir de esta cantidad de testimonios avisamos que conviene revisar/
+// archivar los más viejos (no es un límite duro, solo una sugerencia).
+const TESTIMONIALS_WARNING_THRESHOLD = 15;
 
 // phone_color se guarda como clase de Tailwind (ej. 'bg-amber-400') o, para
 // la opción "Personalizado", como código hexadecimal (ej. '#F59E0B'). Un
@@ -156,17 +173,41 @@ export default function AdminTestimonials() {
     }
   };
 
-  const handleMove = async (index: number, direction: -1 | 1) => {
+  // Aplica un nuevo orden localmente y persiste en Supabase solo los
+  // testimonios cuya posición realmente cambió (reasigna sort_order
+  // secuencial 1..N según la posición final).
+  const persistOrder = async (reordered: DbTestimonial[]) => {
+    setTestimonials(reordered);
+    const changed = reordered
+      .map((t, i) => ({ t, newSortOrder: i + 1 }))
+      .filter(({ t, newSortOrder }) => t.sort_order !== newSortOrder);
+    await Promise.all(changed.map(({ t, newSortOrder }) => updateTestimonial(t.id, { sort_order: newSortOrder })));
+  };
+
+  const handleMove = (index: number, direction: -1 | 1) => {
     const target = testimonials[index + direction];
-    const current = testimonials[index];
     if (!target) return;
     const reordered = [...testimonials];
     [reordered[index], reordered[index + direction]] = [reordered[index + direction], reordered[index]];
-    setTestimonials(reordered);
-    await Promise.all([
-      updateTestimonial(current.id, { sort_order: target.sort_order }),
-      updateTestimonial(target.id, { sort_order: current.sort_order }),
-    ]);
+    persistOrder(reordered);
+  };
+
+  // Mover varias posiciones de una: al principio o al final de la lista,
+  // para no depender de un click por posición en listas largas.
+  const handleMoveToStart = (index: number) => {
+    if (index === 0) return;
+    const reordered = [...testimonials];
+    const [item] = reordered.splice(index, 1);
+    reordered.unshift(item);
+    persistOrder(reordered);
+  };
+
+  const handleMoveToEnd = (index: number) => {
+    if (index === testimonials.length - 1) return;
+    const reordered = [...testimonials];
+    const [item] = reordered.splice(index, 1);
+    reordered.push(item);
+    persistOrder(reordered);
   };
 
   const handleDelete = async (id: string) => {
@@ -192,10 +233,25 @@ export default function AdminTestimonials() {
         <p className="text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900 rounded-xl px-3 py-2.5 mb-4">{error}</p>
       )}
 
+      {testimonials.length > TESTIMONIALS_WARNING_THRESHOLD && (
+        <p className="flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl px-3 py-2 mb-4">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          Tenés {testimonials.length} testimonios — considerá revisar y eliminar los más viejos para no afectar el rendimiento del sitio.
+        </p>
+      )}
+
       <div className="space-y-3 mb-6">
         {testimonials.map((t, i) => (
           <div key={t.id} className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 shadow-xs">
             <div className="flex flex-col gap-0.5 shrink-0">
+              <button
+                title="Mover al principio"
+                disabled={i === 0}
+                onClick={() => handleMoveToStart(i)}
+                className="text-slate-300 hover:text-brand-blue dark:text-slate-600 dark:hover:text-brand-sky disabled:opacity-30"
+              >
+                <ChevronsUp className="w-3.5 h-3.5" />
+              </button>
               <button
                 title="Mover arriba"
                 disabled={i === 0}
@@ -212,12 +268,17 @@ export default function AdminTestimonials() {
               >
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
+              <button
+                title="Mover al final"
+                disabled={i === testimonials.length - 1}
+                onClick={() => handleMoveToEnd(i)}
+                className="text-slate-300 hover:text-brand-blue dark:text-slate-600 dark:hover:text-brand-sky disabled:opacity-30"
+              >
+                <ChevronsDown className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            <label
-              className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group"
-              title={uploadingId === t.id ? (uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...') : undefined}
-            >
+            <label className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group">
               {t.is_video ? (
                 <div className="w-full h-full flex items-center justify-center text-slate-400">
                   <Video className="w-4 h-4" />
@@ -247,7 +308,13 @@ export default function AdminTestimonials() {
 
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{t.client_name}</p>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500">{t.is_video ? 'Video' : 'Captura de chat'}</p>
+              {uploadingId === t.id ? (
+                <p className="text-[11px] font-semibold text-brand-blue dark:text-brand-sky flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin shrink-0" /> {uploadPhase ? PHASE_LABEL[uploadPhase] : 'Subiendo...'}
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">{t.is_video ? 'Video' : 'Captura de chat'}</p>
+              )}
             </div>
 
             <span

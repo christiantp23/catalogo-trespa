@@ -206,6 +206,8 @@ export default function AdminApp() {
             </div>
             <a
               href="/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-brand-blue dark:text-slate-400 dark:hover:text-brand-sky px-3 py-2 rounded-xl transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" /> Ver tienda
@@ -272,6 +274,8 @@ export default function AdminApp() {
                 </button>
                 <a
                   href="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" /> Ver tienda

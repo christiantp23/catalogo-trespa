@@ -16,7 +16,11 @@ import {
   Calendar,
   Clock,
   BellRing,
+  Bell,
   X,
+  AlertTriangle,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   DbOrder,
@@ -39,6 +43,16 @@ const STATUS_STYLE: Record<OrderStatus, string> = {
   confirmada: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   cancelada: 'bg-slate-100 text-slate-500 border-slate-200',
 };
+
+// Valores guardados en orders.payment_method (ver CheckoutModal.tsx) -> texto legible.
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  bold_tarjeta: 'Bold (tarjeta)',
+  transferencia: 'Transferencia bancaria',
+};
+
+// Después de esta cantidad de fallos seguidos del polling silencioso,
+// dejamos de tragarnos el error y avisamos.
+const SYNC_FAIL_THRESHOLD = 2;
 
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('es-CO', {
@@ -123,6 +137,14 @@ export default function AdminOrders() {
   const knownOrderIdsRef = useRef<Set<string> | null>(null);
   const [newOrderToasts, setNewOrderToasts] = useState<NewOrderToast[]>([]);
 
+  // Fallos consecutivos del polling silencioso: si se acumulan, avisamos
+  // en vez de fallar en silencio (se resetea apenas un poll funciona).
+  const [syncFailCount, setSyncFailCount] = useState(0);
+
+  // Ventas nuevas detectadas por el polling que el admin todavía no revisó
+  // (campanita del encabezado). Se limpia al hacer click en la campana.
+  const [unseenCount, setUnseenCount] = useState(0);
+
   const load = async () => {
     setLoading(true);
     setIsSyncing(true);
@@ -161,14 +183,22 @@ export default function AdminOrders() {
           newOnes.forEach((o) => {
             setTimeout(() => dismissToast(o.id), 8000);
           });
+          // El toast se autodescarta a los 8s; esto queda como registro de
+          // que hubo ventas nuevas aunque nadie estuviera mirando la pantalla.
+          setUnseenCount((c) => c + newOnes.length);
         }
       }
       knownOrderIdsRef.current = new Set(fresh.map((o) => o.id));
       setOrders(fresh);
+      setSyncFailCount(0);
     } catch {
-      // si falla el poll silencioso, no interrumpimos al admin con un error
+      // El poll es silencioso (no toca loading/error) para no interrumpir,
+      // pero si falla varias veces seguidas sí avisamos (ver syncFailCount).
+      setSyncFailCount((c) => c + 1);
     }
   };
+
+  const markNotificationsSeen = () => setUnseenCount(0);
 
   useEffect(() => {
     load();
@@ -264,6 +294,20 @@ export default function AdminOrders() {
     });
   };
 
+  const allVisibleExpanded = dateFiltered.length > 0 && dateFiltered.every((o) => expanded.has(o.id));
+
+  const toggleExpandAll = () => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (allVisibleExpanded) {
+        dateFiltered.forEach((o) => next.delete(o.id));
+      } else {
+        dateFiltered.forEach((o) => next.add(o.id));
+      }
+      return next;
+    });
+  };
+
   const handleConfirm = async (id: string) => {
     setBusyId(id);
     try {
@@ -329,15 +373,19 @@ export default function AdminOrders() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-6">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-display font-bold text-lg text-slate-900 dark:text-white leading-tight">Ventas</h1>
-            {isSyncing ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> Sincronizando...
+            {syncFailCount >= SYNC_FAIL_THRESHOLD ? (
+              <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                <AlertTriangle className="w-3 h-3" /> No se pudo sincronizar — reintentando
+              </span>
+            ) : isSyncing ? (
+              <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" /> Sincronizando...
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Sincronizado
+              <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" /> Sincronizado
               </span>
             )}
           </div>
@@ -350,6 +398,18 @@ export default function AdminOrders() {
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400 dark:text-slate-500">Total de ventas</span>
+          <button
+            onClick={markNotificationsSeen}
+            title={unseenCount > 0 ? `${unseenCount} venta${unseenCount === 1 ? '' : 's'} nueva${unseenCount === 1 ? '' : 's'} sin revisar` : 'Sin notificaciones nuevas'}
+            className="relative flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-brand-blue hover:text-brand-blue transition-colors"
+          >
+            <Bell className="w-4 h-4" />
+            {unseenCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-rose-500 rounded-full">
+                {unseenCount > 9 ? '9+' : unseenCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-blue hover:text-brand-blue transition-colors"
@@ -467,7 +527,7 @@ export default function AdminOrders() {
       </div>
 
       {/* Filtros por estado */}
-      <div className="flex gap-2 overflow-x-auto mb-4">
+      <div className="flex items-center gap-2 overflow-x-auto mb-4">
         {(
           [
             ['pendiente', `Pendientes${pendingCount ? ` (${pendingCount})` : ''}`],
@@ -488,6 +548,23 @@ export default function AdminOrders() {
             {label}
           </button>
         ))}
+
+        {dateFiltered.length > 0 && (
+          <button
+            onClick={toggleExpandAll}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap border border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 ml-auto shrink-0"
+          >
+            {allVisibleExpanded ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5" /> Contraer todo
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5" /> Expandir todo
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {loading && <div className="text-center py-16 text-sm text-slate-400 dark:text-slate-500">Cargando ventas...</div>}
@@ -557,6 +634,9 @@ export default function AdminOrders() {
                           <span>{o.phone}</span>
                           {o.city && <span>· {o.city}</span>}
                           {o.cedula && <span>· CC {o.cedula}</span>}
+                          {o.payment_method && (
+                            <span>· {PAYMENT_METHOD_LABEL[o.payment_method] || o.payment_method}</span>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap gap-2 pt-2">

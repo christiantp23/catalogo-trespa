@@ -20,6 +20,7 @@ export interface DbColorway {
   name: string;
   image_url: string | null;
   available: boolean;
+  sort_order?: number;
   sizes?: DbSize[];
 }
 
@@ -103,7 +104,7 @@ function mapDbProductToProduct(p: DbProduct): Product {
 // =========================================================================
 export async function fetchProducts(): Promise<Product[]> {
   const rows = await sbRest<DbProduct[]>(
-    "products?select=*,colorways(*,sizes(*))&archived=eq.false&order=created_at.desc"
+    "products?select=*,colorways(*,sizes(*))&archived=eq.false&order=created_at.desc&colorways.order=sort_order.asc"
   );
   return rows.map(mapDbProductToProduct);
 }
@@ -114,14 +115,14 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function fetchAdminProducts(opts: { includeArchived?: boolean } = {}): Promise<DbProduct[]> {
   const archivedFilter = opts.includeArchived ? "" : "&archived=eq.false";
   return sbRest<DbProduct[]>(
-    `products?select=*,colorways(*,sizes(*))${archivedFilter}&order=created_at.desc`,
+    `products?select=*,colorways(*,sizes(*))${archivedFilter}&order=created_at.desc&colorways.order=sort_order.asc`,
     { useAuth: true }
   );
 }
 
 export async function fetchArchivedProducts(): Promise<DbProduct[]> {
   return sbRest<DbProduct[]>(
-    "products?select=*,colorways(*,sizes(*))&archived=eq.true&order=created_at.desc",
+    "products?select=*,colorways(*,sizes(*))&archived=eq.true&order=created_at.desc&colorways.order=sort_order.asc",
     { useAuth: true }
   );
 }
@@ -170,19 +171,26 @@ export async function deleteProduct(id: string): Promise<void> {
 export async function addColorway(
   productId: string,
   name: string,
-  imageUrl: string
+  imageUrl: string,
+  sortOrder?: number
 ): Promise<DbColorway> {
   const rows = await sbRest<DbColorway[]>("colorways", {
     method: "POST",
     useAuth: true,
-    body: { product_id: productId, name, image_url: imageUrl || null, available: true },
+    body: {
+      product_id: productId,
+      name,
+      image_url: imageUrl || null,
+      available: true,
+      ...(sortOrder !== undefined ? { sort_order: sortOrder } : {}),
+    },
   });
   return rows[0];
 }
 
 export async function updateColorway(
   id: string,
-  input: Partial<{ name: string; image_url: string; available: boolean }>
+  input: Partial<{ name: string; image_url: string; available: boolean; sort_order: number }>
 ): Promise<void> {
   await sbRest(`colorways?id=eq.${id}`, { method: "PATCH", useAuth: true, body: input });
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from 'react';
-import { Save, CheckCircle2, Truck } from 'lucide-react';
+import { Save, CheckCircle2, Truck, ExternalLink } from 'lucide-react';
 import { fetchSiteSettings, updateSiteSettings, SiteSettings } from '../../lib/settings';
 import { validateColombianWhatsappNumber, validateHttpsUrl, validateRequiredText } from '../../lib/validation';
 
@@ -7,6 +7,24 @@ import { validateColombianWhatsappNumber, validateHttpsUrl, validateRequiredText
 // ya usa CheckoutModal.tsx: no se muestra el error hasta que el usuario
 // toca el campo o intenta guardar).
 type FieldName = 'whatsapp' | 'telegram' | 'banner' | 'instagram' | 'facebook';
+
+// Botón "abrir en pestaña nueva" junto a un campo de link/número, para que
+// el dueño pueda verificar el dato tal como quedó escrito antes de guardar.
+// No se muestra si el campo está vacío.
+function VerifyLinkButton({ href, label }: { href: string; label: string }) {
+  if (!href.trim()) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={label}
+      className="shrink-0 flex items-center justify-center w-[46px] h-[46px] rounded-2xl border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-brand-blue hover:border-brand-blue dark:hover:text-brand-sky transition-colors"
+    >
+      <ExternalLink className="w-4 h-4" />
+    </a>
+  );
+}
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -134,183 +152,226 @@ export default function AdminSettings() {
         todo el sitio al instante, sin tocar código.
       </p>
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs p-6 space-y-5">
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-            Número de WhatsApp <span className="text-red-500">*</span>
-          </label>
-          <input
-            name="whatsapp"
-            value={whatsapp}
-            onChange={(e) => handleFieldChange('whatsapp', e.target.value, setWhatsapp)}
-            onBlur={(e) => handleBlur('whatsapp', e.target.value)}
-            placeholder="573001234567"
-            className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
-              errors.whatsapp && touched.whatsapp
-                ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
-                : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
-            }`}
-          />
-          {errors.whatsapp && touched.whatsapp ? (
-            <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-              {errors.whatsapp}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* ===== Sección: Contacto ===== */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs p-6 space-y-5">
+          <div>
+            <h2 className="font-display font-bold text-sm text-slate-900 dark:text-white">Contacto</h2>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Cómo te contactan los clientes desde la tienda.
             </p>
-          ) : (
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Código de país + número, sin espacios ni el símbolo +.</p>
-          )}
-        </div>
+          </div>
 
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-            Link del canal de Telegram (opcional)
-          </label>
-          <input
-            name="telegram"
-            value={telegram}
-            onChange={(e) => handleFieldChange('telegram', e.target.value, setTelegram)}
-            onBlur={(e) => handleBlur('telegram', e.target.value)}
-            placeholder="https://t.me/tucanal"
-            className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
-              errors.telegram && touched.telegram
-                ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
-                : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
-            }`}
-          />
-          {errors.telegram && touched.telegram && (
-            <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-              {errors.telegram}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-            Texto del banner (envío, promo, etc.) <span className="text-red-500">*</span>
-          </label>
-          <input
-            name="banner"
-            value={banner}
-            onChange={(e) => handleFieldChange('banner', e.target.value, setBanner)}
-            onBlur={(e) => handleBlur('banner', e.target.value)}
-            placeholder="Envío gratis a toda Colombia"
-            className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
-              errors.banner && touched.banner
-                ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
-                : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
-            }`}
-          />
-          {errors.banner && touched.banner && (
-            <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-              {errors.banner}
-            </p>
-          )}
-
-          {/* Vista previa en vivo: misma pastilla del Hero público (ícono de
-              camión + texto en mayúsculas + bandera de Colombia), sobre un
-              fondo oscuro para que se vea igual que en el sitio real. */}
-          <div className="mt-3 bg-slate-950 rounded-2xl p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Vista previa</p>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-sky/10 border border-brand-sky/20 text-brand-sky text-xs font-semibold tracking-wider uppercase">
-              <Truck className="w-3.5 h-3.5" />
-              <span>{(banner || 'Envío gratis a toda Colombia').toUpperCase()}</span>
-              <span
-                className="inline-flex flex-col w-5 h-3.5 rounded-xs overflow-hidden shadow-xs border border-brand-sky/20 shrink-0 select-none"
-                title="Colombia"
-              >
-                <span className="bg-[#FCD116] h-1/2 w-full" />
-                <span className="bg-[#003893] h-1/4 w-full" />
-                <span className="bg-[#CE1126] h-1/4 w-full" />
-              </span>
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Número de WhatsApp <span className="text-red-500">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                name="whatsapp"
+                value={whatsapp}
+                onChange={(e) => handleFieldChange('whatsapp', e.target.value, setWhatsapp)}
+                onBlur={(e) => handleBlur('whatsapp', e.target.value)}
+                placeholder="573001234567"
+                className={`flex-1 min-w-0 text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
+                  errors.whatsapp && touched.whatsapp
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
+                }`}
+              />
+              <VerifyLinkButton href={whatsapp.trim() ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : ''} label="Abrir WhatsApp para verificar el número" />
             </div>
+            {errors.whatsapp && touched.whatsapp ? (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {errors.whatsapp}
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Código de país + número, sin espacios ni el símbolo +.</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Link del canal de Telegram (opcional)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                name="telegram"
+                value={telegram}
+                onChange={(e) => handleFieldChange('telegram', e.target.value, setTelegram)}
+                onBlur={(e) => handleBlur('telegram', e.target.value)}
+                placeholder="https://t.me/tucanal"
+                className={`flex-1 min-w-0 text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
+                  errors.telegram && touched.telegram
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
+                }`}
+              />
+              <VerifyLinkButton href={telegram} label="Abrir Telegram para verificar el link" />
+            </div>
+            {errors.telegram && touched.telegram && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {errors.telegram}
+              </p>
+            )}
           </div>
         </div>
 
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-            Instagram (opcional)
-          </label>
-          <input
-            name="instagram"
-            value={instagram}
-            onChange={(e) => handleFieldChange('instagram', e.target.value, setInstagram)}
-            onBlur={(e) => handleBlur('instagram', e.target.value)}
-            placeholder="https://instagram.com/tutienda"
-            className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
-              errors.instagram && touched.instagram
-                ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
-                : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
-            }`}
-          />
-          {errors.instagram && touched.instagram && (
-            <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-              {errors.instagram}
+        {/* ===== Sección: Redes sociales ===== */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs p-6 space-y-5">
+          <div>
+            <h2 className="font-display font-bold text-sm text-slate-900 dark:text-white">Redes sociales</h2>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Links que se muestran en el pie de página y otros puntos del sitio.
             </p>
-          )}
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Instagram (opcional)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                name="instagram"
+                value={instagram}
+                onChange={(e) => handleFieldChange('instagram', e.target.value, setInstagram)}
+                onBlur={(e) => handleBlur('instagram', e.target.value)}
+                placeholder="https://instagram.com/tutienda"
+                className={`flex-1 min-w-0 text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
+                  errors.instagram && touched.instagram
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
+                }`}
+              />
+              <VerifyLinkButton href={instagram} label="Abrir Instagram para verificar el link" />
+            </div>
+            {errors.instagram && touched.instagram && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {errors.instagram}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Facebook (opcional)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                name="facebook"
+                value={facebook}
+                onChange={(e) => handleFieldChange('facebook', e.target.value, setFacebook)}
+                onBlur={(e) => handleBlur('facebook', e.target.value)}
+                placeholder="https://facebook.com/tutienda"
+                className={`flex-1 min-w-0 text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
+                  errors.facebook && touched.facebook
+                    ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
+                }`}
+              />
+              <VerifyLinkButton href={facebook} label="Abrir Facebook para verificar el link" />
+            </div>
+            {errors.facebook && touched.facebook && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {errors.facebook}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-            Facebook (opcional)
-          </label>
-          <input
-            name="facebook"
-            value={facebook}
-            onChange={(e) => handleFieldChange('facebook', e.target.value, setFacebook)}
-            onBlur={(e) => handleBlur('facebook', e.target.value)}
-            placeholder="https://facebook.com/tutienda"
-            className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
-              errors.facebook && touched.facebook
-                ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
-                : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
-            }`}
-          />
-          {errors.facebook && touched.facebook && (
-            <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-              {errors.facebook}
+        {/* ===== Sección: Disponibilidad del sitio ===== */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs p-6 space-y-5">
+          <div>
+            <h2 className="font-display font-bold text-sm text-slate-900 dark:text-white">Disponibilidad del sitio</h2>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Banner de la tienda, horario de contacto y modo mantenimiento.
             </p>
-          )}
-        </div>
+          </div>
 
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-            Horario de atención (opcional)
-          </label>
-          <input
-            name="businessHours"
-            value={businessHours}
-            onChange={(e) => setBusinessHours(e.target.value)}
-            placeholder="Lunes a sábado, 9am a 6pm"
-            className="w-full text-sm px-4 py-3 border border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60 dark:text-white outline-none rounded-2xl transition-all"
-          />
-        </div>
-
-        <div className="flex items-start gap-3 bg-slate-50/60 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-2xl px-4 py-3.5">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={maintenanceMode}
-            onClick={() => setMaintenanceMode((v) => !v)}
-            className={`relative shrink-0 w-10 h-6 rounded-full transition-colors mt-0.5 ${
-              maintenanceMode ? 'bg-brand-blue' : 'bg-slate-300 dark:bg-slate-600'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                maintenanceMode ? 'translate-x-4' : ''
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Texto del banner (envío, promo, etc.) <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="banner"
+              value={banner}
+              onChange={(e) => handleFieldChange('banner', e.target.value, setBanner)}
+              onBlur={(e) => handleBlur('banner', e.target.value)}
+              placeholder="Envío gratis a toda Colombia"
+              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
+                errors.banner && touched.banner
+                  ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                  : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
               }`}
             />
-          </button>
+            {errors.banner && touched.banner && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {errors.banner}
+              </p>
+            )}
+
+            {/* Vista previa en vivo: misma pastilla del Hero público (ícono de
+                camión + texto en mayúsculas + bandera de Colombia), sobre un
+                fondo oscuro para que se vea igual que en el sitio real. */}
+            <div className="mt-3 bg-slate-950 rounded-2xl p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Vista previa</p>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-sky/10 border border-brand-sky/20 text-brand-sky text-xs font-semibold tracking-wider uppercase">
+                <Truck className="w-3.5 h-3.5" />
+                <span>{(banner || 'Envío gratis a toda Colombia').toUpperCase()}</span>
+                <span
+                  className="inline-flex flex-col w-5 h-3.5 rounded-xs overflow-hidden shadow-xs border border-brand-sky/20 shrink-0 select-none"
+                  title="Colombia"
+                >
+                  <span className="bg-[#FCD116] h-1/2 w-full" />
+                  <span className="bg-[#003893] h-1/4 w-full" />
+                  <span className="bg-[#CE1126] h-1/4 w-full" />
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Modo mantenimiento</p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Muestra un mensaje de "Volvemos pronto" en vez del catálogo en la tienda pública. El panel de
-              administración sigue funcionando normal para que puedas desactivarlo.
-            </p>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Horario de atención por WhatsApp (opcional)
+            </label>
+            <input
+              name="businessHours"
+              value={businessHours}
+              onChange={(e) => setBusinessHours(e.target.value)}
+              placeholder="Lunes a sábado, 9am a 6pm"
+              className="w-full text-sm px-4 py-3 border border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60 dark:text-white outline-none rounded-2xl transition-all"
+            />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Se muestra a los clientes junto al botón de WhatsApp.</p>
+          </div>
+
+          <div className="flex items-start gap-3 bg-slate-50/60 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-2xl px-4 py-3.5">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={maintenanceMode}
+              onClick={() => setMaintenanceMode((v) => !v)}
+              className={`relative shrink-0 w-10 h-6 rounded-full transition-colors mt-0.5 ${
+                maintenanceMode ? 'bg-brand-blue' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                  maintenanceMode ? 'translate-x-4' : ''
+                }`}
+              />
+            </button>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Modo mantenimiento</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                Muestra un mensaje de "Volvemos pronto" en vez del catálogo en la tienda pública. El panel de
+                administración sigue funcionando normal para que puedas desactivarlo.
+              </p>
+            </div>
           </div>
         </div>
 
