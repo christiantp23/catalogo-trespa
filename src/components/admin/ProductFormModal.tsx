@@ -22,6 +22,7 @@ const PHASE_LABEL: Record<UploadPhase, string> = {
   uploading: 'Subiendo...',
 };
 import { validateRequiredText, validatePositivePrice } from '../../lib/validation';
+import { fetchProductCosts, upsertProductCost } from '../../lib/productCosts';
 
 interface ProductFormModalProps {
   product: DbProduct | null; // null = crear nuevo
@@ -34,7 +35,7 @@ interface ProductFormModalProps {
 // el error no se muestra hasta que el usuario toca el campo o intenta
 // guardar. "colors" no es un <input> sino la sección de colores/tallas
 // completa, validada solo al intentar guardar.
-type ProductField = 'name' | 'brand' | 'style' | 'gender' | 'price' | 'originalPrice' | 'colors';
+type ProductField = 'name' | 'brand' | 'style' | 'gender' | 'price' | 'originalPrice' | 'colors' | 'costPrice';
 
 const GENDER_TO_CATEGORY: Record<string, DbCategory> = {
   Dama: 'mujer',
@@ -138,6 +139,9 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   const [uploadPhase, setUploadPhase] = useState<UploadPhase | null>(null);
   const [price, setPrice] = useState(product?.price?.toString() || '');
   const [originalPrice, setOriginalPrice] = useState(product?.original_price?.toString() || '');
+  // Precio de costo (interno, no se muestra a clientes): vive en la tabla
+  // aparte product_costs, así que se precarga con un fetch propio.
+  const [costPrice, setCostPrice] = useState('');
   const [rating, setRating] = useState(product?.rating?.toString() || '4.8');
   const [isNew, setIsNew] = useState(product?.is_new ?? true);
   const [isHot, setIsHot] = useState(product?.is_hot ?? false);
@@ -156,6 +160,11 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Id del producto recién creado en un intento de guardado anterior que
+  // falló DESPUÉS de crear el producto (en colorways o en el costo). Se
+  // reutiliza en el próximo intento en vez de llamar a createProduct() de
+  // nuevo, para no duplicar el producto.
+  const [createdProductId, setCreatedProductId] = useState<string | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ProductField, string>>>({});
   const [fieldTouched, setFieldTouched] = useState<Partial<Record<ProductField, boolean>>>({});
@@ -190,6 +199,13 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
         if (!hasAnySize) return 'Agregá al menos una talla en algún color antes de guardar';
         return '';
       }
+      case 'costPrice': {
+        if (!costPrice.trim()) return '';
+        const cost = Number(costPrice);
+        if (Number.isNaN(cost)) return 'El precio de costo debe ser un número';
+        if (cost < 0) return 'El precio de costo no puede ser negativo';
+        return '';
+      }
       default:
         return '';
     }
@@ -199,6 +215,19 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     setFieldTouched((prev) => ({ ...prev, [field]: true }));
     setFieldErrors((prev) => ({ ...prev, [field]: validateProductField(field) }));
   };
+
+  // Precarga el costo actual al editar un producto existente (vive en
+  // product_costs, no en el objeto `product` que ya trajo el listado).
+  useEffect(() => {
+    if (!product) return;
+    fetchProductCosts()
+      .then((costs) => {
+        const cost = costs.get(product.id);
+        if (cost !== undefined && cost !== null) setCostPrice(String(cost));
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   // Revalida en tiempo real los campos que el usuario ya tocó, cada vez que
   // cambia alguno de los valores de los que depende la validación. Se hace
@@ -211,7 +240,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     setFieldErrors((prev) => {
       const next = { ...prev };
       let changed = false;
-      (['name', 'brand', 'style', 'gender', 'price', 'originalPrice'] as ProductField[]).forEach((field) => {
+      (['name', 'brand', 'style', 'gender', 'price', 'originalPrice', 'costPrice'] as ProductField[]).forEach((field) => {
         if (fieldTouched[field]) {
           const msg = validateProductField(field);
           if (next[field] !== msg) {
@@ -223,7 +252,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       return changed ? next : prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, brand, style, gender, price, originalPrice]);
+  }, [name, brand, style, gender, price, originalPrice, costPrice]);
 
   // Igual que arriba, pero para la sección de colores/tallas: si el error
   // "Agregá al menos un color..." ya se mostró (después de un intento de
@@ -421,7 +450,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
     // Validamos todos los campos ANTES de intentar guardar, en vez de
     // dejar que Supabase rechace (o guarde a medias) datos inválidos.
-    const fieldsToValidate: ProductField[] = ['name', 'brand', 'style', 'gender', 'price', 'originalPrice', 'colors'];
+    const fieldsToValidate: ProductField[] = ['name', 'brand', 'style', 'gender', 'price', 'originalPrice', 'colors', 'costPrice'];
     const newErrors: Partial<Record<ProductField, string>> = {};
     fieldsToValidate.forEach((field) => {
       const fieldError = validateProductField(field);
@@ -467,18 +496,37 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
         await updateProduct(product.id, input);
         productId = product.id;
         await logFieldChanges(product, input);
+      } else if (createdProductId) {
+        // Un intento anterior ya creó el producto pero falló después (en
+        // colorways o en el costo) — reutilizamos ese id en vez de crear
+        // otro producto duplicado.
+        productId = createdProductId;
       } else {
         const created = await createProduct(input);
         productId = created.id;
+        setCreatedProductId(productId);
         await logProductChange(productId, input.name, 'created', null, null, null);
       }
 
       await saveColorways(productId);
 
+      // Costo interno: no debe tumbar el guardado del producto si falla —
+      // el producto y sus colorways ya quedaron guardados bien en Supabase.
+      let costPriceError: string | null = null;
+      try {
+        await upsertProductCost(productId, costPrice.trim() ? Number(costPrice) : null);
+      } catch (err) {
+        costPriceError = err instanceof Error ? err.message : 'No se pudo registrar el costo';
+      }
+
       // Mostramos la confirmación notoria (check verde) antes de cerrar el
       // modal, en vez de cerrarlo de una, para que quede claro que se guardó.
       setSaving(false);
       setSaved(true);
+      setCreatedProductId(null);
+      if (costPriceError) {
+        setError(`El producto se guardó pero el costo no se pudo registrar (${costPriceError}) — reintentá desde Editar.`);
+      }
       setTimeout(() => onSaved(), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el producto');
@@ -533,6 +581,21 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
     }
   };
 
+  // Guarda en el estado local el id real que acaba de asignar Supabase a un
+  // color o talla nuevos. Sin esto, un reintento de guardado (ej. si otro
+  // color más adelante en el loop falla) volvería a tratar este color/talla
+  // como "nuevo" y lo duplicaría, porque `c.id`/`s.id` seguirían en null.
+  const markColorwaySaved = (colorKey: string, id: string) => {
+    setColorways((prev) => prev.map((cw) => (cw.key === colorKey ? { ...cw, id } : cw)));
+  };
+  const markSizeSaved = (colorKey: string, sizeKey: string, id: string) => {
+    setColorways((prev) =>
+      prev.map((cw) =>
+        cw.key !== colorKey ? cw : { ...cw, sizes: cw.sizes.map((sz) => (sz.key === sizeKey ? { ...sz, id } : sz)) }
+      )
+    );
+  };
+
   // Reconcilia el estado local de colores/tallas con Supabase:
   // crea lo nuevo, actualiza lo que cambió, borra lo marcado.
   const saveColorways = async (productId: string) => {
@@ -572,17 +635,30 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               await updateSize(s.id, s.available);
             }
           } else if (!s.id && !s.deleted) {
-            await addSize(c.id, s.size, s.available);
+            const createdSize = await addSize(c.id, s.size, s.available);
+            markSizeSaved(c.key, s.key, createdSize.id);
           }
         }
       } else {
         // Color nuevo: se crea recién ahora, junto con sus tallas
         const created = await addColorway(productId, c.name, c.image_url, newSortOrder);
+        markColorwaySaved(c.key, created.id);
         for (const s of c.sizes) {
-          if (!s.deleted) await addSize(created.id, s.size, s.available);
+          if (!s.deleted) {
+            const createdSize = await addSize(created.id, s.size, s.available);
+            markSizeSaved(c.key, s.key, createdSize.id);
+          }
         }
       }
     }
+  };
+
+  // Cerrar (cancelar, click afuera, X): si había quedado un producto creado
+  // de un intento fallido anterior, se olvida acá — la próxima vez que se
+  // abra el modal en modo "crear" arranca limpio.
+  const handleClose = () => {
+    setCreatedProductId(null);
+    onClose();
   };
 
   return (
@@ -591,7 +667,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -604,7 +680,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
           <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">
             {isEditing ? 'Editar producto' : 'Nuevo producto'}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 dark:text-slate-500 dark:hover:bg-slate-800">
+          <button onClick={handleClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 dark:text-slate-500 dark:hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1182,6 +1258,32 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
             </div>
           </div>
 
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              Precio de costo (interno, no se muestra a clientes)
+            </label>
+            <input
+              name="costPrice"
+              type="number"
+              min="0"
+              value={costPrice}
+              onChange={(e) => setCostPrice(e.target.value)}
+              onBlur={() => handleFieldBlur('costPrice')}
+              placeholder="Opcional"
+              className={`w-full text-sm px-4 py-3 border outline-none rounded-2xl transition-all dark:text-white ${
+                fieldErrors.costPrice && fieldTouched.costPrice
+                  ? 'border-rose-300 dark:border-rose-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-900 bg-rose-50/10 dark:bg-rose-950/20'
+                  : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
+              }`}
+            />
+            {fieldErrors.costPrice && fieldTouched.costPrice && (
+              <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                {fieldErrors.costPrice}
+              </p>
+            )}
+          </div>
+
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
               <input type="checkbox" checked={isNew} onChange={(e) => setIsNew(e.target.checked)} className="w-4 h-4 accent-brand-blue" />
@@ -1218,7 +1320,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={saved}
               className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
             >

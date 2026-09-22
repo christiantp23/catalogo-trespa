@@ -1,6 +1,8 @@
 import {StrictMode, Suspense, lazy, useEffect, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import TerminosPage from './pages/TerminosPage.tsx';
+import PoliticaDatosPage from './pages/PoliticaDatosPage.tsx';
 import './index.css';
 
 // Solo el panel admin queda diferido (chunk aparte): es una ruta poco usada,
@@ -25,26 +27,31 @@ function RouteLoadingFallback() {
 // mostramos el panel de administración en vez de la tienda. Usamos el hash
 // (no una ruta /admin) porque GitHub Pages sirve archivos estáticos y no
 // puede resolver rutas profundas sin configuración extra — el hash siempre
-// funciona sin tocar el hosting.
+// funciona sin tocar el hosting. Mismo mecanismo para #terminos y
+// #privacidad (Términos y Condiciones / Política de Tratamiento de Datos).
 function Root() {
-  const [isAdminRoute, setIsAdminRoute] = useState(() =>
-    window.location.hash.startsWith('#admin'),
-  );
+  const [hash, setHash] = useState(() => window.location.hash);
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setIsAdminRoute(window.location.hash.startsWith('#admin'));
-    };
+    const handleHashChange = () => setHash(window.location.hash);
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  if (isAdminRoute) {
+  if (hash.startsWith('#admin')) {
     return (
       <Suspense fallback={<RouteLoadingFallback />}>
         <AdminApp />
       </Suspense>
     );
+  }
+
+  if (hash.startsWith('#terminos')) {
+    return <TerminosPage />;
+  }
+
+  if (hash.startsWith('#privacidad')) {
+    return <PoliticaDatosPage />;
   }
 
   return <App />;

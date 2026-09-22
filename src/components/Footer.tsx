@@ -129,9 +129,9 @@ export default function Footer({ openInfoModal }: FooterProps) {
               WhatsApp/Telegram se ocultan cuando esta franja entra en
               pantalla, para no taparla. */}
           <div id="footer-legal-links" className="flex gap-4">
-            <a href="#" className="hover:text-slate-300">Términos y condiciones</a>
+            <a href="#terminos" className="hover:text-slate-300">Términos y condiciones</a>
             <span>•</span>
-            <a href="#" className="hover:text-slate-300">Tratamiento de datos personales</a>
+            <a href="#privacidad" className="hover:text-slate-300">Tratamiento de datos personales</a>
           </div>
         </div>
       </div>

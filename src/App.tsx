@@ -131,6 +131,23 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     setIsCatalogLoading(true);
+
+    // El splash se apaga con lo que pase primero entre "el catálogo ya
+    // resolvió" (con datos o con error) y este tope de 1.5s, para no
+    // dejarlo colgado si la carga tarda. Si ya se mostró antes en esta
+    // pestaña (sessionStorage), isSplashLoading ya arrancó en false y esto
+    // no hace más que confirmarlo.
+    const finishSplash = () => {
+      setIsSplashLoading(false);
+      try {
+        sessionStorage.setItem('splash_shown', 'true');
+      } catch {
+        // si sessionStorage falla (modo privado, etc.), el splash podría
+        // volver a mostrarse la próxima carga — no es grave
+      }
+    };
+    const splashMaxTimer = setTimeout(finishSplash, 1500);
+
     fetchProducts()
       .then((data) => {
         if (!cancelled) {
@@ -142,10 +159,15 @@ export default function App() {
         if (!cancelled) setProductsError(err.message || 'No se pudo cargar el catálogo');
       })
       .finally(() => {
-        if (!cancelled) setIsCatalogLoading(false);
+        if (!cancelled) {
+          setIsCatalogLoading(false);
+          clearTimeout(splashMaxTimer);
+          finishSplash();
+        }
       });
     return () => {
       cancelled = true;
+      clearTimeout(splashMaxTimer);
     };
   }, []);
 
@@ -187,15 +209,17 @@ export default function App() {
   }, [products]);
   const [onlyDiscounts, setOnlyDiscounts] = useState(false);
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
-  const [isSplashLoading, setIsSplashLoading] = useState(true);
-
-  // Temporizador para desactivar el Splash Screen después de 2.2 segundos
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsSplashLoading(false);
-    }, 2200); // 2.2 segundos de intro premium
-    return () => clearTimeout(timer);
-  }, []);
+  // No repetir el splash en la misma sesión de navegador: si ya se mostró
+  // una vez (sessionStorage, ver el useEffect que trae los productos),
+  // arranca directo en false. El apagado real (primera vez) está atado a
+  // la carga real del catálogo, con tope de 1.5s — ver ese mismo efecto.
+  const [isSplashLoading, setIsSplashLoading] = useState(() => {
+    try {
+      return sessionStorage.getItem('splash_shown') !== 'true';
+    } catch {
+      return true;
+    }
+  });
 
   // Simular animación de carga rápida (shimmer skeleton) al aplicar filtros
   useEffect(() => {

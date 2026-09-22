@@ -31,6 +31,7 @@ export interface DbOrder {
   total: number;
   confirmed_at: string | null;
   notes: string | null;
+  payment_proof_url: string | null;
   order_items?: DbOrderItem[];
 }
 
@@ -116,5 +117,13 @@ export async function revertOrderToPending(id: string): Promise<void> {
     method: "PATCH",
     useAuth: true,
     body: { status: "pendiente", confirmed_at: null },
+  });
+}
+
+export async function attachPaymentProof(orderId: string, url: string): Promise<void> {
+  await sbRest(`orders?id=eq.${orderId}`, {
+    method: "PATCH",
+    useAuth: true,
+    body: { payment_proof_url: url },
   });
 }

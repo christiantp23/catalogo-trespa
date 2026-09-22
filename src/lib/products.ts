@@ -199,12 +199,13 @@ export async function deleteColorway(id: string): Promise<void> {
   await sbRest(`colorways?id=eq.${id}`, { method: "DELETE", useAuth: true });
 }
 
-export async function addSize(colorwayId: string, size: string, available: boolean = true): Promise<void> {
-  await sbRest("sizes", {
+export async function addSize(colorwayId: string, size: string, available: boolean = true): Promise<DbSize> {
+  const rows = await sbRest<DbSize[]>("sizes", {
     method: "POST",
     useAuth: true,
     body: { colorway_id: colorwayId, size, available },
   });
+  return rows[0];
 }
 
 export async function updateSize(id: string, available: boolean): Promise<void> {

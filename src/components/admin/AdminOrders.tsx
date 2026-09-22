@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, ChangeEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   CheckCircle2,
@@ -21,6 +21,10 @@ import {
   AlertTriangle,
   Maximize2,
   Minimize2,
+  PiggyBank,
+  Upload,
+  Loader2,
+  Users,
 } from 'lucide-react';
 import {
   DbOrder,
@@ -29,8 +33,16 @@ import {
   confirmOrder,
   cancelOrder,
   revertOrderToPending,
+  attachPaymentProof,
 } from '../../lib/orders';
 import { DbProduct, fetchAdminProducts } from '../../lib/products';
+import { fetchProductCosts } from '../../lib/productCosts';
+import { uploadProductImage, UploadPhase } from '../../lib/supabase';
+
+const PROOF_UPLOAD_PHASE_LABEL: Record<UploadPhase, string> = {
+  optimizing: 'Optimizando imagen...',
+  uploading: 'Subiendo...',
+};
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pendiente: 'Pendiente',
@@ -124,12 +136,18 @@ export default function AdminOrders() {
   const [filter, setFilter] = useState<FilterValue>('pendiente');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [uploadingProofId, setUploadingProofId] = useState<string | null>(null);
+  const [proofUploadPhase, setProofUploadPhase] = useState<UploadPhase | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
   const [productsMap, setProductsMap] = useState<Map<string, DbProduct>>(new Map());
+  // Costo por producto (tabla product_costs, solo admin) para calcular el
+  // margen estimado — un product_id ausente del Map o con cost_price null
+  // significa "sin costo cargado", y esos items se excluyen del cálculo.
+  const [costsMap, setCostsMap] = useState<Map<string, number | null>>(new Map());
 
   // IDs de órdenes ya vistas, para detectar cuáles son nuevas en cada
   // poll — no dispara toasts en la primera carga, solo cuando aparece algo
@@ -206,6 +224,10 @@ export default function AdminOrders() {
     fetchAdminProducts({ includeArchived: true })
       .then((products) => setProductsMap(new Map(products.map((p) => [p.id, p]))))
       .catch(() => {});
+    // Costos internos, para la métrica de margen estimado.
+    fetchProductCosts()
+      .then(setCostsMap)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -248,8 +270,21 @@ export default function AdminOrders() {
     );
     const topProducts = Array.from(productTotals.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
-    return { todayTotal, weekTotal, weekChangePct, monthTotal, avgTicket, pendingTotal, topProducts };
-  }, [confirmed, orders]);
+    // Margen estimado del mes: solo sobre items cuyo producto tiene costo
+    // cargado en product_costs — si no está en el Map o cost_price es null,
+    // ese item se excluye del cálculo en vez de contarlo como margen 100%.
+    const monthMargin = monthConfirmed.reduce((sum, o) => {
+      const orderMargin = (o.order_items || []).reduce((itemSum, item) => {
+        if (!item.product_id) return itemSum;
+        const cost = costsMap.get(item.product_id);
+        if (cost === undefined || cost === null) return itemSum;
+        return itemSum + (item.price_at_time - cost) * item.quantity;
+      }, 0);
+      return sum + orderMargin;
+    }, 0);
+
+    return { todayTotal, weekTotal, weekChangePct, monthTotal, avgTicket, pendingTotal, topProducts, monthMargin };
+  }, [confirmed, orders, costsMap]);
 
   // Pipeline de filtros: búsqueda de texto -> estado -> rango de fechas.
   const searchFiltered = useMemo(() => {
@@ -342,6 +377,26 @@ export default function AdminOrders() {
       alert('No se pudo revertir: ' + (err instanceof Error ? err.message : ''));
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // Comprobante de pago: reutiliza uploadProductImage (misma optimización/
+  // subida que ya usan AdminTestimonials.tsx y ProductFormModal.tsx) y
+  // se puede adjuntar en cualquier estado de la orden.
+  const handleProofFileSelected = async (orderId: string, e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingProofId(orderId);
+    try {
+      const url = await uploadProductImage(file, setProofUploadPhase);
+      await attachPaymentProof(orderId, url);
+      await load();
+    } catch (err) {
+      alert('No se pudo subir el comprobante: ' + (err instanceof Error ? err.message : ''));
+    } finally {
+      setUploadingProofId(null);
+      setProofUploadPhase(null);
+      e.target.value = '';
     }
   };
 
@@ -456,6 +511,15 @@ export default function AdminOrders() {
           <p className="font-display font-bold text-lg dark:brightness-125" style={{ color: '#1E2568' }}>
             {formatPrice(metrics.avgTicket)}
           </p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+            <PiggyBank className="w-3.5 h-3.5" /> Margen estimado (mes)
+          </p>
+          <p className="font-display font-bold text-lg dark:brightness-125" style={{ color: '#1E2568' }}>
+            {formatPrice(metrics.monthMargin)}
+          </p>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Solo productos con costo cargado</p>
         </div>
         <div className="rounded-2xl p-4 shadow-xs border dark:brightness-110" style={{ backgroundColor: '#FFD10015', borderColor: '#FFD10060' }}>
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-1">
@@ -636,6 +700,88 @@ export default function AdminOrders() {
                           {o.cedula && <span>· CC {o.cedula}</span>}
                           {o.payment_method && (
                             <span>· {PAYMENT_METHOD_LABEL[o.payment_method] || o.payment_method}</span>
+                          )}
+                        </div>
+
+                        {(() => {
+                          // Historial simple: mismo cliente (cédula si la orden la
+                          // tiene, si no teléfono) con otras órdenes ya confirmadas.
+                          const matchValue = o.cedula || o.phone;
+                          const priorConfirmedCount = orders.filter(
+                            (other) =>
+                              other.id !== o.id &&
+                              other.status === 'confirmada' &&
+                              (o.cedula ? other.cedula === matchValue : other.phone === matchValue)
+                          ).length;
+                          if (priorConfirmedCount === 0) return null;
+                          return (
+                            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-brand-blue dark:text-brand-sky">
+                              <Users className="w-3.5 h-3.5 shrink-0" />
+                              Cliente recurrente — {priorConfirmedCount} compra{priorConfirmedCount === 1 ? '' : 's'} confirmada
+                              {priorConfirmedCount === 1 ? '' : 's'} antes
+                            </p>
+                          );
+                        })()}
+
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                            Comprobante de pago
+                          </p>
+                          {o.payment_proof_url ? (
+                            <div className="flex items-center gap-2">
+                              <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer" className="block w-14 h-14 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                                <img src={o.payment_proof_url} alt="Comprobante de pago" className="w-full h-full object-cover" />
+                              </a>
+                              <label
+                                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border cursor-pointer transition-colors ${
+                                  uploadingProofId === o.id
+                                    ? 'text-slate-400 border-slate-200 dark:border-slate-700'
+                                    : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-brand-blue hover:text-brand-blue'
+                                }`}
+                              >
+                                {uploadingProofId === o.id ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> {proofUploadPhase ? PROOF_UPLOAD_PHASE_LABEL[proofUploadPhase] : 'Subiendo...'}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="w-3.5 h-3.5" /> Reemplazar
+                                  </>
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleProofFileSelected(o.id, e)}
+                                  disabled={uploadingProofId === o.id}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          ) : (
+                            <label
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border cursor-pointer transition-colors ${
+                                uploadingProofId === o.id
+                                  ? 'text-slate-400 border-slate-200 dark:border-slate-700'
+                                  : 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-brand-blue hover:text-brand-blue'
+                              }`}
+                            >
+                              {uploadingProofId === o.id ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> {proofUploadPhase ? PROOF_UPLOAD_PHASE_LABEL[proofUploadPhase] : 'Subiendo...'}
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-3.5 h-3.5" /> Adjuntar comprobante
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleProofFileSelected(o.id, e)}
+                                disabled={uploadingProofId === o.id}
+                                className="hidden"
+                              />
+                            </label>
                           )}
                         </div>
 
