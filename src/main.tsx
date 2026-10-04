@@ -25,9 +25,9 @@ function RouteLoadingFallback() {
 
 // Enrutamiento simple: si la URL tiene #admin (ej. tudominio.com/#admin),
 // mostramos el panel de administración en vez de la tienda. Usamos el hash
-// (no una ruta /admin) porque GitHub Pages sirve archivos estáticos y no
-// puede resolver rutas profundas sin configuración extra — el hash siempre
-// funciona sin tocar el hosting. Mismo mecanismo para #terminos y
+// (no una ruta /admin) porque el sitio es estático y las rutas profundas
+// necesitarían configuración extra en el hosting — el hash siempre
+// funciona sin tocarlo. Mismo mecanismo para #terminos y
 // #privacidad (Términos y Condiciones / Política de Tratamiento de Datos).
 function Root() {
   const [hash, setHash] = useState(() => window.location.hash);

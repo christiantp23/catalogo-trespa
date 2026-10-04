@@ -23,7 +23,7 @@ Base sólida para una tienda de este tamaño (CSP estricta, RLS, límite de pedi
 | 12 | Media | SEO | Navegación por hash (`#terminos`, `#privacidad`) no indexable; sin sitemap ni datos estructurados `Product`; meta tags estáticos. | Rutas reales con `_redirects` de Netlify, `sitemap.xml`, JSON-LD de producto, título y descripción por producto. |
 | 13 | Baja | `Footer.tsx`, `FloatingTelegram.tsx`, `CatalogSection.tsx` | Número, redes, horario y Telegram fijos en el código, aunque `site_settings` tiene esos campos (en `null`). Si cambias el número en el panel, el Footer no se entera. | Leer todo desde `site_settings`. |
 | 14 | Baja | Archivos gigantes | `ProductFormModal.tsx` (1.353 líneas), `ProductCard.tsx` (900), `AdminOrders.tsx` (870), `CheckoutModal.tsx` (772). Difíciles de mantener y probar. | Extraer subcomponentes y hooks (formulario de checkout, validación, lightbox). |
-| 15 | Baja | `package.json` | `deploy` usa `gh-pages` (no instalado; el hosting es Netlify). `clean` usa `rm -rf` (falla en Windows). `vite` duplicado en `dependencies` y `devDependencies`. `Trespa_Store_Presentacion.pptx` suelto en la raíz. | Limpiar scripts y dependencias. |
+| 15 | Baja | `package.json` | (scripts `deploy`/`predeploy` de `gh-pages` ya eliminados). `clean` usa `rm -rf` (falla en Windows). `vite` duplicado en `dependencies` y `devDependencies`. `Trespa_Store_Presentacion.pptx` suelto en la raíz. | Limpiar scripts y dependencias. |
 | 16 | Baja | 6 usos de `key={index}` | Pueden causar fallos de render en listas que cambian. | Usar ids estables. |
 | 17 | Baja | Comentarios | Muchos comentarios didácticos extensos (p. ej. `App.tsx`, `CheckoutModal.tsx`) que explican React básico. | Dejar solo los que explican el "por qué". |
 
