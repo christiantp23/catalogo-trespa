@@ -140,6 +140,8 @@ test('el checkout público guarda la orden en Supabase', async ({ page, context 
     await page.fill('input[name="phone"]', TEST_PHONE);
     await page.fill('input[name="city"]', 'Bogotá');
     await page.fill('input[name="address"]', 'Calle 1 # 2-34, apto de prueba automatizada');
+    // Autorización de tratamiento de datos (casilla obligatoria).
+    await page.check('input[name="consent"]');
 
     // Enviar el formulario: confirma que se abre una pestaña nueva hacia
     // WhatsApp (no hace falta completar nada ahí).

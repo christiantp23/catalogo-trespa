@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, CheckoutData } from '../types';
 import { useSiteSettings } from '../lib/settings';
 import { createOrderFromCheckout } from '../lib/orders';
-import { validateColombianMobile } from '../lib/validation';
+import { validateColombianMobile, validateConsent } from '../lib/validation';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export default function CheckoutModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [acceptedData, setAcceptedData] = useState(false);
 
 
   // Real-time validation states
@@ -153,9 +154,12 @@ export default function CheckoutModal({
       }
     });
 
+    const consentError = validateConsent(acceptedData);
+    if (consentError) newErrors.consent = consentError;
+
     // Mark all as touched to show errors
     const newTouched: Record<string, boolean> = {};
-    fieldsToValidate.forEach((field) => {
+    [...fieldsToValidate, 'consent'].forEach((field) => {
       newTouched[field] = true;
     });
     setTouched(newTouched);
@@ -163,7 +167,7 @@ export default function CheckoutModal({
 
     if (Object.keys(newErrors).length > 0) {
       // Focus first field with error
-      const firstErrorField = fieldsToValidate.find((field) => newErrors[field]);
+      const firstErrorField = [...fieldsToValidate, 'consent'].find((field) => newErrors[field]);
       if (firstErrorField) {
         const inputElement = document.querySelector(`[name="${firstErrorField}"]`) as HTMLInputElement | null;
         if (inputElement) {
@@ -188,7 +192,7 @@ export default function CheckoutModal({
     // Format payment method text
     const paymentMethodText =
       formData.paymentMethod === 'bold_tarjeta'
-        ? 'Tarjeta de Crédito/Débito (Pasarela Segura Bold)'
+        ? 'Tarjeta de Crédito/Débito (link de pago de Bold por WhatsApp)'
         : 'Transferencia Bancaria (Bancolombia, Nequi, Nu o Lulo)';
 
     // =========================================================================
@@ -256,7 +260,7 @@ export default function CheckoutModal({
     // Sección: Resumen final de costos
     message += `💵 *RESUMEN DE LA TRANSACCIÓN:*\n`;
     message += `• *Subtotal Productos:* ${formatPrice(total)}\n`;
-    message += `• *Costo de Envío:* ¡GRATIS! 🇨🇴 (Todo Colombia)\n`;
+    message += `• *Costo de Envío:* Gratis a la mayor parte del país (municipios de difícil acceso: se cobra el trayecto)\n`;
     message += `• *VALOR TOTAL A PAGAR:* ${formatPrice(total)} COP\n\n`;
 
     message += `💬 _Quedo en espera de tu confirmación para proceder con el pago y envío de mi pedido. ¡Muchas gracias!_`;
@@ -553,7 +557,7 @@ export default function CheckoutModal({
                             <CreditCard className="w-3.5 h-3.5" /> Pago con Tarjeta (Bold)
                           </span>
                           <span className="text-[10px] text-slate-500 leading-tight">
-                            Paga de forma 100% segura con tu tarjeta débito/crédito vía link de Bold.
+                            Te enviamos por WhatsApp un link de Bold para pagar con tu tarjeta débito/crédito.
                           </span>
                         </button>
                         <button
@@ -585,7 +589,7 @@ export default function CheckoutModal({
                         </p>
                       </div>
                       <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
-                        Envío Gratis Incluido
+                        Envío gratis a la mayor parte del país
                       </span>
                     </div>
 
@@ -603,18 +607,55 @@ export default function CheckoutModal({
                           </p>
                         </div>
                         <div className="bg-white p-2.5 rounded-xl border border-slate-100">
-                          <div className="text-[10px] font-bold text-slate-800 mb-0.5">2. Pago Seguro</div>
+                          <div className="text-[10px] font-bold text-slate-800 mb-0.5">2. Coordinamos el pago</div>
                           <p className="text-[10px] text-slate-500 leading-normal">
                             Confirmamos disponibilidad y te enviamos link de Bold o Cuenta.
                           </p>
                         </div>
                         <div className="bg-white p-2.5 rounded-xl border border-slate-100">
-                          <div className="text-[10px] font-bold text-slate-800 mb-0.5">3. Despacho Gratis</div>
+                          <div className="text-[10px] font-bold text-slate-800 mb-0.5">3. Despacho</div>
                           <p className="text-[10px] text-slate-500 leading-normal">
-                            Empacamos tu calzado y te compartimos la guía de envío por medio de WhatsApp.
+                            Empacamos tu calzado y te compartimos la guía de envío por WhatsApp.
                           </p>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Autorización de tratamiento de datos (Ley 1581 de 2012) */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-start gap-2.5 text-xs text-slate-700 leading-snug cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="consent"
+                          checked={acceptedData}
+                          onChange={(e) => {
+                            setAcceptedData(e.target.checked);
+                            setTouched((prev) => ({ ...prev, consent: true }));
+                            setErrors((prev) => ({ ...prev, consent: validateConsent(e.target.checked) }));
+                          }}
+                          className={`mt-0.5 w-4 h-4 shrink-0 rounded accent-brand-blue ${
+                            errors.consent && touched.consent ? 'outline outline-2 outline-rose-400' : ''
+                          }`}
+                        />
+                        <span>
+                          Autorizo el tratamiento de mis datos personales según la{' '}
+                          <a
+                            href="#privacidad"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-blue font-semibold hover:underline"
+                          >
+                            Política de Tratamiento de Datos
+                          </a>
+                          . <span className="text-red-500">*</span>
+                        </span>
+                      </label>
+                      {errors.consent && touched.consent && (
+                        <p className="text-[11px] text-rose-500 font-medium mt-1 flex items-center gap-1.5 animate-fadeIn">
+                          <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
+                          {errors.consent}
+                        </p>
+                      )}
                     </div>
 
                     {/* Submit Button */}
@@ -692,7 +733,7 @@ export default function CheckoutModal({
                           Confirmamos Disponibilidad y Pago
                         </h5>
                         <p className="text-[11px] text-slate-500 leading-normal mt-0.5">
-                          Un asesor validará tu inventario en segundos y te enviará el link de pago seguro de Bold (tarjetas) o datos de transferencia.
+                          Un asesor confirmará la disponibilidad y te enviará por WhatsApp el link de pago de Bold (tarjetas) o los datos de transferencia.
                         </p>
                       </div>
                     </div>
@@ -704,10 +745,10 @@ export default function CheckoutModal({
                       <div>
                         <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                           <Truck className="w-3.5 h-3.5 text-slate-500" />
-                          Envío Gratis y Rastreo Nacional
+                          Envío y rastreo
                         </h5>
                         <p className="text-[11px] text-slate-500 leading-normal mt-0.5">
-                          Una vez verificado, empacamos tus zapatos y te enviamos la guía para que rastrees tu pedido sin costo adicional.
+                          Una vez confirmado el pago, empacamos tus zapatos y te enviamos la guía para que rastrees tu pedido. El envío es gratis a la mayor parte del país; en municipios de difícil acceso se cobra el trayecto.
                         </p>
                       </div>
                     </div>

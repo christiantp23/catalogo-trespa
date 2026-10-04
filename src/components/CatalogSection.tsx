@@ -134,7 +134,7 @@ export default function CatalogSection({
               ¿Buscas más modelos o una referencia específica?
             </h3>
             <p className="text-slate-300 text-xs leading-relaxed font-normal">
-              En esta web exhibimos solo una selección de nuestros modelos más destacados. Contamos con cientos de referencias adicionales esperando por ti. ¡Explora todos los estilos en nuestro canal de Telegram o escríbenos a WhatsApp para consultar por ese par que tanto quieres!
+              En esta web exhibimos solo una selección de nuestros modelos más destacados. Tenemos más referencias disponibles por encargo. ¡Explora todos los estilos en nuestro canal de Telegram o escríbenos a WhatsApp para consultar por ese par que tanto quieres!
             </p>
           </div>
 

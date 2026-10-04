@@ -77,7 +77,7 @@ export default function Hero({ bannerText }: HeroProps) {
               transition={{ delay: 0.2 }}
               className="text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed font-light"
             >
-              Renueva tu colección con los tenis que están rompiendo las redes. Referencias seleccionadas para darte el mejor look y la mayor comodidad en cada salida.
+              Renueva tu colección con referencias seleccionadas, pensadas para tu estilo y tu comodidad en cada salida.
             </motion.p>
 
             <motion.div

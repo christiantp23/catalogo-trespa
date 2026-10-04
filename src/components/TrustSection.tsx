@@ -13,9 +13,9 @@ export default function TrustSection() {
               <CheckCircle className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Calidad Garantizada</h4>
+              <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Referencias importadas</h4>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Ofrecemos zapatillas importadas con un alto nivel de detalle, comodidad y excelente relación calidad-precio.
+                Ofrecemos zapatillas importadas con buen nivel de detalle y comodidad, a un precio accesible.
               </p>
             </div>
           </div>
@@ -28,7 +28,7 @@ export default function TrustSection() {
             <div>
               <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Envío Gratis</h4>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Llegamos a cada rincón de Colombia sin costo adicional. Despachos rápidos con rastreo garantizado.
+                Envío gratis a la mayor parte de Colombia (en municipios de difícil acceso se cobra el trayecto). Te enviamos la guía de rastreo por WhatsApp.
               </p>
             </div>
           </div>
@@ -39,9 +39,9 @@ export default function TrustSection() {
               <Heart className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Atención Humana</h4>
+              <h4 className="font-display font-bold text-sm text-slate-900 uppercase">Atención por WhatsApp</h4>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Nada de bots aburridos. Chatea directamente con asesores apasionados por los tenis deportivos.
+                Chatea directamente con un asesor por WhatsApp para resolver tus dudas sobre tallas, disponibilidad y envíos.
               </p>
             </div>
           </div>

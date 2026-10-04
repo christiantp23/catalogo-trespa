@@ -26,7 +26,7 @@ export default function Footer({ openInfoModal }: FooterProps) {
               referrerPolicy="no-referrer"
             />
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm font-light">
-              En Trespa Store creemos que unas buenas zapatillas hablan por ti. Por eso ofrecemos referencias importadas con gran nivel de detalle, pensadas para quienes valoran el estilo.
+              En Trespa Store creemos que unas buenas zapatillas hablan por ti. Por eso ofrecemos referencias importadas con buen nivel de detalle, pensadas para quienes valoran el estilo.
             </p>
             {/* Redes sociales centradas */}
             <div className="flex items-center justify-center gap-2.5 pt-2">
@@ -111,7 +111,7 @@ export default function Footer({ openInfoModal }: FooterProps) {
                 className="inline-flex items-center gap-2 text-xs font-bold text-[#25D366] hover:underline"
               >
                 <span className="w-2.5 h-2.5 rounded-full bg-[#25D366] animate-pulse shrink-0" />
-                Asesor de Turno Conectado en WhatsApp
+                Escríbenos por WhatsApp
               </a>
             </div>
           </div>

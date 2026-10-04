@@ -65,7 +65,7 @@ export function useSiteSettings() {
   return {
     whatsappNumber: settings?.whatsapp_number || FALLBACK_WHATSAPP,
     telegramLink: settings?.telegram_link || null,
-    bannerText: settings?.banner_text || 'Envío gratis a toda Colombia',
+    bannerText: settings?.banner_text || 'Envío gratis a la mayor parte de Colombia',
     maintenanceMode: settings?.maintenance_mode || false,
     settingsLoaded: settings !== null,
   };

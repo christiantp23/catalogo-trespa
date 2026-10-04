@@ -376,10 +376,10 @@ PUNTOS INDICADORES DE NAVEGACIÓN (Pagination Dots)
                 {/* Pie de página interior de testimonios */}
                 <div className="text-center mt-8">
                     <p className="text-[11px] text-slate-500 font-semibold flex items-center justify-center gap-1.5 flex-wrap">
-                        <span>Únete a los más de</span>
-                        <span className="text-slate-900 bg-white border border-slate-150 py-0.5 px-2 rounded-md shadow-xs font-bold">1,500+ clientes</span>
+                        <span>Experiencias de</span>
+                        <span className="text-slate-900 bg-white border border-slate-150 py-0.5 px-2 rounded-md shadow-xs font-bold">nuestros clientes</span>
                         <span className="flex items-center gap-1.5">
-                            <span>satisfechos en toda Colombia</span>
+                            <span>en toda Colombia</span>
                             <span className="inline-flex flex-col w-5 h-3.5 rounded-xs overflow-hidden shadow-xs border border-slate-200/50 shrink-0 select-none" title="Colombia">
                                 <span className="bg-[#FCD116] h-1/2 w-full" />
                                 <span className="bg-[#003893] h-1/4 w-full" />

@@ -278,7 +278,7 @@ export default function CartSidebar({
                   )}
                   <div className="flex justify-between text-xs text-slate-500">
                     <span>Envío</span>
-                    <span className="text-emerald-600 font-medium">¡Gratis a nivel nacional!</span>
+                    <span className="text-emerald-600 font-medium">Gratis a la mayor parte del país</span>
                   </div>
                   <div className="h-px bg-slate-200 my-2" />
                   <div className="flex justify-between text-base font-bold text-slate-900 font-display">

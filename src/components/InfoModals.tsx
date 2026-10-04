@@ -53,21 +53,16 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
     },
     {
       num: 4,
-      title: 'Productos sin Garantía',
-      text: 'Los guayos no cuentan con garantía.',
+      title: 'Cambios y Devoluciones',
+      text: '• No realizamos cambios de referencia.\n• No realizamos devoluciones de dinero, salvo por error atribuible a Trespa Store.\n• No apartamos mercancía de un día para otro si no está paga.',
     },
     {
       num: 5,
-      title: 'Cambios y Devoluciones',
-      text: '• No realizamos cambios de referencia.\n• No realizamos devoluciones de dinero, salvo en casos específicos o por error atribuible a Trespa Store.\n• No apartamos mercancía de un día para otro si no está paga.',
+      title: 'Garantía',
+      text: 'La garantía legal por defectos aplica siempre. Además, la garantía sobre pegues y costuras dura 1 mes, contado desde la entrega del producto al cliente.',
     },
     {
       num: 6,
-      title: 'Garantía',
-      text: 'La garantía cubre pegues y costuras, por un período de 1 mes de uso, contado desde la entrega del producto al cliente.',
-    },
-    {
-      num: 7,
       title: 'Errores atribuibles a Trespa Store',
       text: 'Si el error es nuestro (referencia incorrecta, talla o color equivocado), Trespa Store asume todos los costos asociados al proceso de cambio.',
     },
@@ -304,12 +299,12 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                       <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                         <CreditCard className="w-4 h-4 text-brand-blue animate-pulse" />
                         <span className="text-xs font-black uppercase tracking-widest text-brand-blue font-display">
-                          Paga Seguro con Bold
+                          Pago con tarjeta mediante link de Bold
                         </span>
                       </div>
 
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Nuestra pasarela oficial de pago es <strong className="font-semibold text-brand-blue">Bold</strong>, autorizada y vigilada para garantizar total seguridad. Al enviar tu pedido, nuestro asesor te proporcionará un link único de Bold para procesar el pago al instante con cualquier tarjeta de crédito o débito nacional e internacional.
+                        Este sitio no procesa pagos. Si prefieres pagar con tarjeta, después de confirmar tu pedido por WhatsApp nuestro asesor te enviará un link de pago de <strong className="font-semibold text-brand-blue">Bold</strong>, donde pagas directamente con tu tarjeta de crédito o débito.
                       </p>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -363,7 +358,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                             <h6 className="text-xs font-bold text-slate-900">Nequi</h6>
                           </div>
                           <p className="text-[10px] text-slate-500 leading-relaxed font-light">
-                            Transfiere al instante usando nuestro número celular asignado. Método ágil, seguro, sin cargos adicionales de consignación nacional.
+                            Transfiere usando el número celular que te indicará nuestro asesor por WhatsApp. Luego envías el comprobante para confirmar.
                           </p>
                         </div>
 
@@ -373,7 +368,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                             <h6 className="text-xs font-bold text-slate-900">Nu Colombia (La Moradita)</h6>
                           </div>
                           <p className="text-[10px] text-slate-500 leading-relaxed font-light">
-                            Transferencias seguras e inmediatas utilizando nuestra cuenta de ahorros Nu. Totalmente digital y con confirmación rápida.
+                            Transferencia a nuestra cuenta de ahorros Nu, con los datos que te enviará nuestro asesor por WhatsApp.
                           </p>
                         </div>
 
@@ -383,7 +378,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                             <h6 className="text-xs font-bold text-slate-900">Lulo Bank</h6>
                           </div>
                           <p className="text-[10px] text-slate-500 leading-relaxed font-light">
-                            Transferencias directas libres de gravamenes y costos. Facilitamos cuentas de última tecnología para agilizar tu compra.
+                            Transferencia directa a nuestra cuenta, con los datos que te enviará nuestro asesor por WhatsApp.
                           </p>
                         </div>
                       </div>
@@ -397,7 +392,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex gap-3 text-blue-950">
       <Truck className="w-5 h-5 shrink-0 text-brand-blue mt-0.5" />
       <p className="text-xs font-medium leading-relaxed">
-        <strong className="font-black">ENVÍO GRATIS A NIVEL NACIONAL.</strong> En Trespa Store cubrimos el costo del envío a la mayor parte del país. Para municipios de difícil acceso se cobra el valor del trayecto.
+        <strong className="font-black">ENVÍO GRATIS A LA MAYOR PARTE DEL PAÍS.</strong> En Trespa Store cubrimos el costo del envío a la mayor parte de Colombia. Para municipios de difícil acceso se cobra el valor del trayecto.
       </p>
     </div>
 
@@ -409,9 +404,9 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
             <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md font-mono">
               Interrapidísimo
             </span>
-            <span className="text-emerald-500 text-[10px] font-bold">Cobertura Total</span>
+            <span className="text-emerald-500 text-[10px] font-bold">Envíos a nivel nacional</span>
           </div>
-          <h4 className="text-sm font-extrabold text-slate-900 font-display">Líder en Envíos Nacionales</h4>
+          <h4 className="text-sm font-extrabold text-slate-900 font-display">Envíos nacionales</h4>
           <div className="flex justify-center items-center py-4 bg-slate-50 rounded-xl">
             <img src="/logo-inter.webp" alt="Logo Interrapidísimo" loading="lazy" className="h-10 w-auto object-contain" />
           </div>
@@ -429,9 +424,9 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md font-mono">
               Coordinadora
             </span>
-            <span className="text-emerald-500 text-[10px] font-bold">Cobertura Total</span>
+            <span className="text-emerald-500 text-[10px] font-bold">Envíos a nivel nacional</span>
           </div>
-          <h4 className="text-sm font-extrabold text-slate-900 font-display">Logística y Cuidado Extra</h4>
+          <h4 className="text-sm font-extrabold text-slate-900 font-display">Envíos nacionales</h4>
           <div className="flex justify-center items-center py-4 bg-slate-50 rounded-xl">
             <img src="/logo-coordi.webp" alt="Logo Coordinadora" loading="lazy" className="h-10 w-auto object-contain" />
           </div>
@@ -459,7 +454,7 @@ export default function InfoModals({ isOpen, onClose, initialTab = 'tallas' }: I
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Soporte activo por WhatsApp
+                    Soporte por WhatsApp
                   </span>
                 </div>
                 <span className="text-xs font-bold text-brand-blue bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1">

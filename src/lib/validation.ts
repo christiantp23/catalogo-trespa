@@ -63,6 +63,12 @@ export function validateEmail(value: string): string {
   return '';
 }
 
+// Autorización de tratamiento de datos personales (Ley 1581 de 2012):
+// casilla obligatoria en el checkout.
+export function validateConsent(accepted: boolean): string {
+  return accepted ? '' : 'Debes autorizar el tratamiento de tus datos personales para continuar';
+}
+
 // Precio: obligatorio y mayor a 0.
 export function validatePositivePrice(value: string, fieldLabel = 'El precio'): string {
   const trimmed = value.trim();
