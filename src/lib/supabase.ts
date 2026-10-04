@@ -173,14 +173,25 @@ async function uploadFileToStorage(file: File, _isRetry = false): Promise<string
     }
   );
 
-  // Mismo mecanismo de renovación automática de sesión que sbRest.
-  if (!res.ok && !_isRetry && (res.status === 401 || res.status === 403)) {
-    const refreshed = await refreshSession();
-    if (refreshed) return uploadFileToStorage(file, true);
-  }
-
   if (!res.ok) {
     const text = await res.text();
+    // Storage responde un token vencido con HTTP 400 y, dentro del cuerpo,
+    // {"statusCode":"403", ... "exp" claim timestamp check failed}. Por eso
+    // no basta con mirar res.status: también se revisa el cuerpo.
+    const expiredToken =
+      res.status === 401 ||
+      res.status === 403 ||
+      /"statusCode"\s*:\s*"?(401|403)"?|exp"? claim|jwt expired/i.test(text);
+
+    // Mismo mecanismo de renovación automática de sesión que sbRest.
+    if (expiredToken && !_isRetry) {
+      const refreshed = await refreshSession();
+      if (refreshed) return uploadFileToStorage(file, true);
+      throw new Error("Tu sesión del panel venció. Cierra sesión, vuelve a ingresar e intenta de nuevo.");
+    }
+    if (expiredToken) {
+      throw new Error("Tu sesión del panel venció. Cierra sesión, vuelve a ingresar e intenta de nuevo.");
+    }
     throw new Error(text || `No se pudo subir la imagen (${res.status})`);
   }
 

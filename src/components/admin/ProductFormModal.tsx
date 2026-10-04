@@ -99,6 +99,23 @@ interface LocalColorway {
   deleted?: boolean;
 }
 
+// Foto con respaldo: si el archivo no se puede mostrar (formato no soportado,
+// subida dañada), se ve un aviso en vez del ícono de imagen rota.
+function SafeImg({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div
+        className={`${className} flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400`}
+        title="No se pudo mostrar esta foto. Quítala y vuelve a subirla."
+      >
+        <ImageOff className="w-4 h-4" />
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} />;
+}
+
 function colorwaysFromProduct(product: DbProduct | null): LocalColorway[] {
   if (!product?.colorways) return [];
   return product.colorways.map((c) => ({
@@ -121,7 +138,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
   const [name, setName] = useState(product?.name || '');
   const [brand, setBrand] = useState(product?.brand || '');
-  const [gender, setGender] = useState(product?.gender || 'Dama');
+  const [gender, setGender] = useState(product?.gender || '');
   // La categoría ("Estilo") se elige de las que ya existen en el catálogo.
   // "Otra" abre un campo de texto; esa categoría nueva queda disponible en
   // el select para la próxima vez apenas se guarda este producto (porque el
@@ -195,6 +212,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
       case 'colors': {
         const activeColorways = colorways.filter((c) => !c.deleted);
         if (activeColorways.length === 0) return 'Agregá al menos un color antes de guardar';
+        if (activeColorways.some((c) => !c.name.trim())) return 'Escribe el nombre del color de cada foto antes de guardar';
         const hasAnySize = activeColorways.some((c) => c.sizes.some((s) => !s.deleted));
         if (!hasAnySize) return 'Agregá al menos una talla en algún color antes de guardar';
         return '';
@@ -281,6 +299,20 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
         uploaded.push(url);
       }
       setImages((prev) => [...prev, ...uploaded]);
+      // Producto nuevo: cada foto genera su propia opción (foto + color + tallas).
+      if (!isEditing) {
+        setColorways((prev) => [
+          ...prev,
+          ...uploaded.map((url) => ({
+            key: genKey(),
+            id: null,
+            name: '',
+            image_url: url,
+            available: true,
+            sizes: [] as LocalSize[],
+          })),
+        ]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo subir una de las fotos');
     } finally {
@@ -292,6 +324,9 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
 
   const handleRemoveImage = (url: string) => {
     setImages((prev) => prev.filter((img) => img !== url));
+    if (!isEditing) {
+      setColorways((prev) => prev.filter((c) => c.id || c.image_url !== url));
+    }
   };
 
   // -- colores --
@@ -736,7 +771,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-                Género
+                Género *
               </label>
               <select
                 name="gender"
@@ -749,6 +784,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                     : 'border-slate-100 dark:border-slate-700 focus:border-brand-blue bg-slate-50/60 dark:bg-slate-800/60'
                 }`}
               >
+                <option value="">Selecciona el género</option>
                 <option value="Dama">Dama</option>
                 <option value="Caballero">Caballero</option>
                 <option value="Unisex">Unisex</option>
@@ -838,7 +874,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
               <div className="flex flex-wrap gap-2 mb-2">
                 {images.map((url) => (
                   <div key={url} className="relative w-16 h-16 shrink-0 group">
-                    <img
+                    <SafeImg
                       src={url}
                       alt=""
                       className="w-16 h-16 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
@@ -982,7 +1018,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                         }
                       >
                         {c.image_url ? (
-                          <img src={c.image_url} alt={c.name} className="w-10 h-10 rounded-xl object-cover bg-slate-100 dark:bg-slate-800" />
+                          <SafeImg src={c.image_url} alt={c.name} className="w-10 h-10 rounded-xl object-cover bg-slate-100 dark:bg-slate-800" />
                         ) : (
                           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                             <Upload className="w-3.5 h-3.5 text-slate-400" />
@@ -1044,7 +1080,7 @@ export default function ProductFormModal({ product, existingStyles, onClose, onS
                           Tallas disponibles (EUR)
                         </p>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                          Click: agregar → agotada → quitar
+                          1 clic: disponible · 2 clics: agotada · 3 clics: quitar
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-1.5">

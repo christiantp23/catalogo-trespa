@@ -233,6 +233,7 @@ test('costo de producto: se guarda en product_costs, se precarga y alimenta el m
     // categoría nueva directamente; si tiene, queda la primera preseleccionada.
     const customStyle = page.locator('input[name="style"]');
     if (await customStyle.count()) await customStyle.fill('TestStyle');
+    await page.locator('select[name="gender"]').selectOption('Dama');
     await page.locator('input[name="price"]').fill(String(PRICE));
     await page.locator('input[name="costPrice"]').fill(String(COST));
     await page.getByPlaceholder('Nombre del color (ej: Azul/Vino)').last().fill('Test');
