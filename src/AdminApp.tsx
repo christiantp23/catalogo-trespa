@@ -6,7 +6,8 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import AdminOrders from './components/admin/AdminOrders';
 import AdminSettings from './components/admin/AdminSettings';
 import AdminTestimonials from './components/admin/AdminTestimonials';
-import { LayoutGrid, ShoppingBag, Settings, MessageSquareQuote, LogOut, ExternalLink, Menu, X, HelpCircle, Sun, Moon } from 'lucide-react';
+import AdminInventoryMetrics from './components/admin/AdminInventoryMetrics';
+import { LayoutGrid, BarChart3, ShoppingBag, Settings, MessageSquareQuote, LogOut, ExternalLink, Menu, X, HelpCircle, Sun, Moon } from 'lucide-react';
 
 // =========================================================================
 // ADMIN APP — punto de entrada del panel de administración de Trespa Store
@@ -16,7 +17,7 @@ import { LayoutGrid, ShoppingBag, Settings, MessageSquareQuote, LogOut, External
 // renueva sola cuando vence (ver lib/supabase.ts) — no hace falta loguearse
 // de nuevo cada hora.
 
-type Tab = 'productos' | 'ventas' | 'configuracion' | 'testimonios';
+type Tab = 'productos' | 'inventario' | 'ventas' | 'configuracion' | 'testimonios';
 
 export default function AdminApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -52,9 +53,10 @@ export default function AdminApp() {
   useEffect(() => {
     const SHORTCUT_TABS: Record<string, Tab> = {
       '1': 'productos',
-      '2': 'ventas',
-      '3': 'configuracion',
-      '4': 'testimonios',
+      '2': 'inventario',
+      '3': 'ventas',
+      '4': 'configuracion',
+      '5': 'testimonios',
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -95,6 +97,7 @@ export default function AdminApp() {
 
   const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
     { id: 'productos', label: 'Productos', icon: LayoutGrid },
+    { id: 'inventario', label: 'Inventario', icon: BarChart3 },
     { id: 'ventas', label: 'Ventas', icon: ShoppingBag },
     { id: 'configuracion', label: 'Configuración', icon: Settings },
     { id: 'testimonios', label: 'Testimonios', icon: MessageSquareQuote },
@@ -102,21 +105,9 @@ export default function AdminApp() {
 
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 font-sans ${darkMode ? 'dark' : ''}`}>
-      {/* Barra superior: logo + título, navegación de escritorio (pestañas +
-          acciones, inline, igual que siempre) y en mobile un botón de menú
-          hamburguesa que despliega esas mismas pestañas/acciones en una
-          lista vertical. Así la fila superior nunca tiene más contenido del
-          que entra en una línea, sin importar el ancho de pantalla — se
-          reemplaza el intento anterior (flex-wrap + orden de filas), que
-          seguía dependiendo de que todo cupiera horizontalmente. */}
+      {/* Barra superior: logo + título, navegación limpia segmentada sin desborde ni barra de scroll */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          {/* Logo + título del panel. logo.webp es un lienzo cuadrado con
-              mucho margen en blanco alrededor de la marca — usamos
-              logo-trimmed.webp (mismo logo, recortado al contenido real,
-              sin el margen sobrante) para que se vea nítido y de buen
-              tamaño al escalarlo por altura, sin necesitar el recorte por
-              CSS que hacía falta antes con el original cuadrado. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 shrink-0 min-w-0">
             <img
               src="/logo-trimmed.webp"
@@ -127,26 +118,25 @@ export default function AdminApp() {
             <h1 className="text-base font-bold text-blue-900 dark:text-white whitespace-nowrap">Panel Admin</h1>
           </div>
 
-          {/* Navegación de escritorio (pestañas + acciones): oculta en
-              mobile, igual que estaba antes de este cambio. */}
-          <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
+          {/* Navegación de escritorio: estilo segmentado moderno, sin scrollbar horizontal */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
             {TABS.map((t) => {
               const Icon = t.icon;
+              const isActive = tab === t.id;
               return (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-1.5 px-4 py-4 text-xs font-bold uppercase tracking-wide border-b-2 whitespace-nowrap transition-colors ${
-                    tab === t.id
-                      ? 'border-brand-blue text-brand-blue dark:border-brand-sky dark:text-brand-sky'
-                      : 'border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl whitespace-nowrap transition-all ${isActive
+                      ? 'bg-white dark:bg-slate-900 text-brand-blue dark:text-brand-sky shadow-xs font-bold'
+                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium'
+                    }`}
                 >
                   <Icon className="w-3.5 h-3.5" /> {t.label}
                 </button>
               );
             })}
-          </div>
+          </nav>
           <div className="hidden md:flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -188,16 +178,20 @@ export default function AdminApp() {
                         <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold">Ctrl+1</kbd>
                       </li>
                       <li className="flex items-center justify-between">
-                        <span>Ventas</span>
+                        <span>Inventario / Métricas</span>
                         <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold">Ctrl+2</kbd>
                       </li>
                       <li className="flex items-center justify-between">
-                        <span>Configuración</span>
+                        <span>Ventas</span>
                         <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold">Ctrl+3</kbd>
                       </li>
                       <li className="flex items-center justify-between">
-                        <span>Testimonios</span>
+                        <span>Configuración</span>
                         <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold">Ctrl+4</kbd>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>Testimonios</span>
+                        <kbd className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold">Ctrl+5</kbd>
                       </li>
                     </ul>
                   </motion.div>
@@ -253,11 +247,10 @@ export default function AdminApp() {
                         setTab(t.id);
                         setIsMobileMenuOpen(false);
                       }}
-                      className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors ${
-                        tab === t.id
+                      className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors ${tab === t.id
                           ? 'bg-brand-blue/10 text-brand-blue dark:bg-brand-sky/10 dark:text-brand-sky'
                           : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
-                      }`}
+                        }`}
                     >
                       <Icon className="w-4 h-4" /> {t.label}
                     </button>
@@ -295,7 +288,8 @@ export default function AdminApp() {
         </AnimatePresence>
       </div>
 
-      {tab === 'productos' && <AdminDashboard />}
+      {tab === 'productos' && <AdminDashboard onNavigateToMetrics={() => setTab('inventario')} />}
+      {tab === 'inventario' && <AdminInventoryMetrics onNavigateToProducts={() => setTab('productos')} />}
       {tab === 'ventas' && <AdminOrders />}
       {tab === 'configuracion' && <AdminSettings />}
       {tab === 'testimonios' && <AdminTestimonials />}

@@ -14,6 +14,7 @@ import {
   History,
   ArrowLeft,
   Download,
+  BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -55,7 +56,11 @@ function escapeCsvValue(value: string | number): string {
   return str;
 }
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  onNavigateToMetrics?: () => void;
+}
+
+export default function AdminDashboard({ onNavigateToMetrics }: AdminDashboardProps = {}) {
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -297,7 +302,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           {showArchived && (
@@ -314,6 +319,14 @@ export default function AdminDashboard() {
           <p className="text-xs text-slate-400 dark:text-slate-500">{products.length} {showArchived ? 'archivados' : 'en catálogo'}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {onNavigateToMetrics && (
+            <button
+              onClick={onNavigateToMetrics}
+              className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-blue hover:text-brand-blue dark:hover:text-brand-sky transition-colors flex-1 sm:flex-none whitespace-nowrap"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-brand-blue dark:text-brand-sky" /> Métricas
+            </button>
+          )}
           <button
             onClick={handleExportCatalog}
             disabled={exporting}
@@ -323,11 +336,10 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors flex-1 sm:flex-none whitespace-nowrap ${
-              showArchived
+            className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors flex-1 sm:flex-none whitespace-nowrap ${showArchived
                 ? 'bg-brand-blue text-white border-brand-blue'
                 : 'text-slate-500 border-slate-200 hover:border-slate-300 dark:text-slate-400 dark:border-slate-700 dark:hover:border-slate-600'
-            }`}
+              }`}
           >
             {showArchived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}{' '}
             {showArchived ? 'Ver activos' : 'Ver archivados'}
@@ -382,11 +394,10 @@ export default function AdminDashboard() {
           <button
             key={g}
             onClick={() => setGenderFilter(g)}
-            className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap border transition-colors ${
-              genderFilter === g
+            className={`px-4 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap border transition-colors ${genderFilter === g
                 ? 'bg-brand-blue text-white border-brand-blue'
                 : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
-            }`}
+              }`}
           >
             {g}
           </button>
@@ -507,22 +518,20 @@ export default function AdminDashboard() {
                             <button
                               title="Marcar como nuevo"
                               onClick={() => handleToggle(p.id, 'is_new', !p.is_new)}
-                              className={`p-2 rounded-xl border transition-colors ${
-                                p.is_new
+                              className={`p-2 rounded-xl border transition-colors ${p.is_new
                                   ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-900 text-sky-600 dark:text-sky-400'
                                   : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400'
-                              }`}
+                                }`}
                             >
                               <Tag className="w-3.5 h-3.5" />
                             </button>
                             <button
                               title="Marcar como destacado"
                               onClick={() => handleToggle(p.id, 'is_hot', !p.is_hot)}
-                              className={`p-2 rounded-xl border transition-colors ${
-                                p.is_hot
+                              className={`p-2 rounded-xl border transition-colors ${p.is_hot
                                   ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-600 dark:text-amber-400'
                                   : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400'
-                              }`}
+                                }`}
                             >
                               <Flame className="w-3.5 h-3.5" />
                             </button>
@@ -615,11 +624,10 @@ export default function AdminDashboard() {
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`w-8 h-8 rounded-xl text-xs font-semibold border transition-colors ${
-                page === currentPage
+              className={`w-8 h-8 rounded-xl text-xs font-semibold border transition-colors ${page === currentPage
                   ? 'bg-brand-blue text-white border-brand-blue'
                   : 'text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
-              }`}
+                }`}
             >
               {page}
             </button>
